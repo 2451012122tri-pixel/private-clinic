@@ -8,4 +8,4 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "mysql+pymysql://root:root@localhost/cli
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app=app)
-login = LoginManager(app=app)
+# login = LoginManager(app=app)
