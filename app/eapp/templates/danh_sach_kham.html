@@ -1,0 +1,111 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Danh sách khám{% endblock %}
+
+{% block content %}
+<h1 class="text-center">Danh sách khám</h1>
+
+<div class="row mb-3 justify-content-center">
+    <div class="col-auto">
+        <label for="date" class="form-label">Chọn ngày khám</label>
+        <input type="date" class="form-control" id="date" name="date">
+    </div>
+</div>
+
+<div class="container mt-3">
+    <table class="table table-striped mb-3">
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Họ tên</th>
+                <th>Giới tính</th>
+                <th>Địa chỉ</th>
+                <th>Số điện thoại</th>
+                <th style="width: 37px"></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>AAA AAA AAA</td>
+                <td>Nam</td>
+                <td>97 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh</td>
+                <td>1234567890</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>BBB BBB BBB</td>
+                <td>Nữ</td>
+                <td>99 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh</td>
+                <td>0987654321</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>CCC CCC CCC</td>
+                <td>Nam</td>
+                <td>98 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh</td>
+                <td>1768594038</td>
+                <td>
+                    <button type="submit" class="btn btn-danger">-</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="row mb-5 align-items-center">
+        <!-- Name Input -->
+        <div class="col-2">
+            <label for="name" class="form-label">Họ tên</label>
+            <input type="text" class="form-control" id="name" placeholder="Nguyễn Văn A">
+        </div>
+
+        <!-- Gender Ratio -->
+        <div class="col-auto">
+            <fieldset>
+                <label class="form-label">Giới tính</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="gender" id="male" value="nam" checked>
+                    <label class="form-check-label" for="male">
+                        Nam
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="gender" id="female" value="nữ">
+                    <label class="form-check-label" for="female">
+                        Nữ
+                    </label>
+                </div>
+            </fieldset>
+        </div>
+
+        <!-- Address Input -->
+        <div class="col">
+            <label for="address" class="form-label">Địa chỉ</label>
+            <input type="text" class="form-control" id="address" placeholder="97 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh">
+        </div>
+
+        <!-- Phone Input -->
+        <div class="col-auto">
+            <label for="phone" class="form-label">Số điện thoại</label>
+            <input type="tel" class="form-control" id="phone">
+        </div>
+
+        <!-- Submit Button -->
+        <div class="col-auto">
+            <button type="submit" class="btn btn-success">+</button>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Hoàn thành</button>
+        </div>
+
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">In danh sách</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
