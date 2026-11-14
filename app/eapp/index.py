@@ -10,6 +10,10 @@ def index():
 def danh_sach_kham():
     return render_template('danh_sach_kham.html')
 
+@app.route('/danhsachkham', methods=['POST'])
+def xu_ly_danh_sach_kham():
+    return render_template('danh_sach_kham.html')
+
 @login.user_loader
 def get_user(user_id):
     return dao.get_user_by_id(user_id)
