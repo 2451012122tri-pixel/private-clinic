@@ -1,6 +1,8 @@
+import csv
+import io
 import hashlib
 from datetime import datetime
-from flask import redirect
+from flask import redirect, request, Response
 from flask_admin import Admin, BaseView, expose, AdminIndexView
 from flask_admin.contrib.sqla import ModelView
 from flask_login import logout_user, current_user
@@ -16,8 +18,7 @@ class MyAdminIndex(AdminIndexView):
         now = datetime.now()
         thang = now.month
         nam = now.year
-        # Nếu dao.py chưa có hàm stats_doanh_thu_thang, tạm để doanh_thu, tong_dt = [], 0 rồi cập nhật ở nhánh stats
-        doanh_thu, tong_dt = dao.stats_doanh_thu_thang(thang, nam) if hasattr(dao, 'stats_doanh_thu_thang') else ([], 0)
+        doanh_thu, tong_dt = dao.stats_doanh_thu_thang(thang, nam)
         return self.render('admin/index.html',
                            tong_thuoc=dao.count_thuoc(),
                            tong_doanh_thu=tong_dt,
@@ -134,6 +135,88 @@ class BaseAdminAuthenticated(BaseView):
         return current_user.is_authenticated and current_user.user_role == UserRoleEnum.QUAN_TRI
 
 
+class StatsView(BaseAdminAuthenticated):
+    @expose('/')
+    def index(self):
+        now = datetime.now()
+        err_msg = None
+        canh_bao_thang = False
+
+        try:
+            thang = int(request.args.get('thang', now.month))
+            nam = int(request.args.get('nam', now.year))
+        except ValueError:
+            thang, nam = now.month, now.year
+            err_msg = "Tháng hoặc năm nhập vào không hợp lệ!"
+
+        if thang < 1 or thang > 12 or nam < 2000 or nam > 2100:
+            err_msg = "Thời gian thống kê không hợp lệ (Tháng phải từ 1-12)!"
+            doanh_thu_stats, tong_doanh_thu, thuoc_stats = [], 0, []
+        else:
+            doanh_thu_stats, tong_doanh_thu = dao.stats_doanh_thu_thang(thang, nam)
+            thuoc_stats = dao.stats_su_dung_thuoc_thang(thang, nam)
+            if (thang == now.month and nam == now.year) or not doanh_thu_stats:
+                canh_bao_thang = True
+
+        return self.render('admin/stats.html',
+                           thang=thang,
+                           nam=nam,
+                           err_msg=err_msg,
+                           canh_bao_thang=canh_bao_thang,
+                           doanh_thu_stats=doanh_thu_stats,
+                           tong_doanh_thu=tong_doanh_thu,
+                           thuoc_stats=thuoc_stats)
+
+    @expose('/export-doanh-thu')
+    def export_doanh_thu(self):
+        now = datetime.now()
+        try:
+            thang = int(request.args.get('thang', now.month))
+            nam = int(request.args.get('nam', now.year))
+        except ValueError:
+            thang, nam = now.month, now.year
+
+        doanh_thu_stats, tong_doanh_thu = dao.stats_doanh_thu_thang(thang, nam)
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([f'BÁO CÁO DOANH THU THÁNG {thang}/{nam}'])
+        writer.writerow(['STT', 'Ngày', 'Số bệnh nhân', 'Doanh thu (VNĐ)', 'Tỷ lệ (%)'])
+        for idx, r in enumerate(doanh_thu_stats, start=1):
+            writer.writerow([idx, f"{r['ngay']}/{thang}/{nam}", r['so_benh_nhan'], int(r['doanh_thu']), r['ty_le']])
+        writer.writerow(['', 'Tổng doanh thu:', '', int(tong_doanh_thu), '100%'])
+
+        return Response(
+            output.getvalue().encode('utf-8-sig'),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=bao_cao_doanh_thu_{thang}_{nam}.csv'}
+        )
+
+    @expose('/export-thuoc')
+    def export_thuoc(self):
+        now = datetime.now()
+        try:
+            thang = int(request.args.get('thang', now.month))
+            nam = int(request.args.get('nam', now.year))
+        except ValueError:
+            thang, nam = now.month, now.year
+
+        thuoc_stats = dao.stats_su_dung_thuoc_thang(thang, nam)
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow([f'BÁO CÁO SỬ DỤNG THUỐC THÁNG {thang}/{nam}'])
+        writer.writerow(['STT', 'Thuốc', 'Đơn vị tính', 'Số lượng', 'Số lần dùng'])
+        for idx, t in enumerate(thuoc_stats, start=1):
+            writer.writerow([idx, t.ten_thuoc, t.ten_don_vi, t.so_luong, t.so_lan_dung])
+
+        return Response(
+            output.getvalue().encode('utf-8-sig'),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=bao_cao_su_dung_thuoc_{thang}_{nam}.csv'}
+        )
+
+
 class LogoutView(BaseAdminAuthenticated):
     @expose('/')
     def index(self):
@@ -145,4 +228,5 @@ admin.add_view(QuyDinhView(QuyDinh, db.session, name='Quy định'))
 admin.add_view(DonViThuocView(DonViThuoc, db.session, name='Đơn vị thuốc'))
 admin.add_view(ThuocView(Thuoc, db.session, name='Quản lý thuốc'))
 admin.add_view(UserView(User, db.session, name='Tài khoản nhân viên'))
+admin.add_view(StatsView(name='Thống kê báo cáo'))
 admin.add_view(LogoutView(name='Đăng xuất'))
