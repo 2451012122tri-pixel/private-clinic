@@ -1,1 +1,146 @@
 {% extends 'admin/master.html' %}
+
+{% block body %}
+<h2 class="text-center text-success font-weight-bold mt-3 mb-4">THỐNG KÊ & BÁO CÁO PHÒNG MẠCH</h2>
+
+<form class="form-inline justify-content-center bg-light p-3 border rounded mb-4" method="get" action="">
+    <label for="thang" class="font-weight-bold mr-2">Tháng:</label>
+    <select id="thang" name="thang" class="form-control mr-3">
+        {% for m in range(1, 13) %}
+            {% if m == thang %}
+            <option value="{{ m }}" selected>Tháng {{ m }}</option>
+            {% else %}
+            <option value="{{ m }}">Tháng {{ m }}</option>
+            {% endif %}
+        {% endfor %}
+    </select>
+
+    <label for="nam" class="font-weight-bold mr-2">Năm:</label>
+    <input type="number" id="nam" name="nam" class="form-control mr-3"
+           min="2020" max="2035" value="{{ nam }}" style="width: 110px;" required />
+
+    <button type="submit" class="btn btn-primary font-weight-bold">Xem báo cáo</button>
+</form>
+
+{% if err_msg %}
+<div class="alert alert-danger text-center">{{ err_msg }}</div>
+{% endif %}
+
+{% if canh_bao_thang and not err_msg %}
+<div class="alert alert-warning text-center">
+    <strong>Lưu ý:</strong> Tháng {{ thang }}/{{ nam }} hiện chưa đầy đủ dữ liệu hoặc chưa hết tháng.
+</div>
+{% endif %}
+
+<!-- BÁO CÁO 1: DOANH THU THEO NGÀY TRONG THÁNG -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-primary text-white font-weight-bold d-flex justify-content-between align-items-center">
+        <span>1. Báo cáo doanh thu theo ngày (Tháng {{ thang }}/{{ nam }})</span>
+        <a href="/admin/statsview/export-doanh-thu?thang={{ thang }}&nam={{ nam }}"
+           class="btn btn-light btn-sm font-weight-bold">
+            Xuất file báo cáo
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Ngày</th>
+                            <th class="text-center">Số bệnh nhân</th>
+                            <th class="text-right">Doanh thu</th>
+                            <th class="text-right">Tỷ lệ (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if doanh_thu_stats %}
+                            {% for r in doanh_thu_stats %}
+                            <tr>
+                                <td>{{ r.ngay }}/{{ thang }}/{{ nam }}</td>
+                                <td class="text-center">{{ r.so_benh_nhan }}</td>
+                                <td class="text-right">{{ "{:,.0f}".format(r.doanh_thu) }} VNĐ</td>
+                                <td class="text-right">{{ r.ty_le }}%</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-info font-weight-bold">
+                                <td colspan="2">TỔNG DOANH THU THÁNG {{ thang }}/{{ nam }}</td>
+                                <td class="text-right text-danger">{{ "{:,.0f}".format(tong_doanh_thu) }} VNĐ</td>
+                                <td class="text-right">100%</td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Không có dữ liệu doanh thu trong tháng {{ thang }}/{{ nam }}</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <canvas id="chartDoanhThu"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BÁO CÁO 2: TẦN SUẤT SỬ DỤNG THUỐC TRONG THÁNG -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white font-weight-bold d-flex justify-content-between align-items-center">
+        <span>2. Báo cáo sử dụng thuốc (Tháng {{ thang }}/{{ nam }})</span>
+        <a href="/admin/statsview/export-thuoc?thang={{ thang }}&nam={{ nam }}"
+           class="btn btn-light btn-sm font-weight-bold">
+            Xuất file báo cáo
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>STT</th>
+                            <th>Tên thuốc</th>
+                            <th>Đơn vị tính</th>
+                            <th class="text-center">Số lượng</th>
+                            <th class="text-center">Số lần dùng</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if thuoc_stats %}
+                            {% for t in thuoc_stats %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td class="font-weight-bold">{{ t.ten_thuoc }}</td>
+                                <td>{{ t.ten_don_vi }}</td>
+                                <td class="text-center">{{ t.so_luong }}</td>
+                                <td class="text-center">{{ t.so_lan_dung }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Chưa có đơn thuốc nào trong tháng {{ thang }}/{{ nam }}</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <canvas id="chartThuoc"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="stats-payload" class="d-none"
+     data-dt-labels='[{% for r in doanh_thu_stats %}"Ngày {{ r.ngay }}"{{ "," if not loop.last }}{% endfor %}]'
+     data-dt-values='[{% for r in doanh_thu_stats %}{{ r.doanh_thu }}{{ "," if not loop.last }}{% endfor %}]'
+     data-thuoc-labels='[{% for t in thuoc_stats %}{{ t.ten_thuoc | tojson }}{{ "," if not loop.last }}{% endfor %}]'
+     data-thuoc-values='[{% for t in thuoc_stats %}{{ t.so_luong }}{{ "," if not loop.last }}{% endfor %}]'>
+</div>
+{% endblock %}
+
+{% block tail %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='main.js') }}"></script>
+{% endblock %}
