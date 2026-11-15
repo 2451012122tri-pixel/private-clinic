@@ -1,6 +1,8 @@
-from flask import render_template, session, request
+from flask import render_template, session, request, redirect
 
 from eapp import app, login, dao
+
+from datetime import date
 
 @app.route('/')
 def index():
@@ -8,19 +10,36 @@ def index():
 
 @app.route('/danhsachkham')
 def danh_sach_kham():
-    date = request.args.get('q')
+    ngay_kham = request.args.get('q')
 
+    is_date_expired = False
     ds_benh_nhan = []
-    if date:
-        ds_benh_nhan = dao.get_danh_sach_benh_nhan(date)
+    if ngay_kham:
+        ds_benh_nhan = dao.get_danh_sach_benh_nhan(ngay_kham)
 
-    return render_template('danh_sach_kham.html', current_date=date, ds_benh_nhan=enumerate(ds_benh_nhan))
+        if date.fromisoformat(ngay_kham) <= date.today():
+            is_date_expired = True
+
+    return render_template('danh_sach_kham.html',
+                           current_date=ngay_kham,
+                           ds_benh_nhan=enumerate(ds_benh_nhan),
+                           count=len(ds_benh_nhan),
+                           date_expired=is_date_expired)
 
 @app.route('/danhsachkham', methods=['POST'])
 def xu_ly_danh_sach_kham():
-    date = request.args.get('q')
+    ngay_kham = request.args.get('q')
 
-    return render_template('danh_sach_kham.html', current_date=date)
+    form = request.form
+    bn = dao.create_benh_nhan(form.get('ho_ten'),
+                         form.get('gioi_tinh'),
+                         form.get('nam_sinh'),
+                         form.get('dia_chi'),
+                         form.get('so_dien_thoai'))
+
+    dao.add_benh_nhan_to_ds_kham(bn, ngay_kham)
+
+    return redirect(f'/danhsachkham?q={ngay_kham}')
 
 @login.user_loader
 def get_user(user_id):

@@ -46,24 +46,31 @@
         </tbody>
     </table>
 
+    {% if count == 0 %}
+    <div class="alert alert-warning">
+        Danh sách trống
+    </div>
+    {% endif %}
+
+    {% if not date_expired %}
     <form method="post" id="form">
         <div class="row mb-5 align-items-center">
             <div class="col-2">
                 <label for="name" class="form-label">Họ tên</label>
-                <input type="text" class="form-control" name="name" id="name" placeholder="Nguyễn Văn A">
+                <input type="text" class="form-control" name="ho_ten" id="name" placeholder="Nguyễn Văn A">
             </div>
 
             <div class="col-auto">
                 <fieldset>
                     <label class="form-label">Giới tính</label>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="gender" id="male" value="nam" checked>
+                        <input class="form-check-input" type="radio" name="gioi_tinh" id="male" value="nam" checked>
                         <label class="form-check-label" for="male">
                             Nam
                         </label>
                     </div>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="gender" id="female" value="nữ">
+                        <input class="form-check-input" type="radio" name="gioi_tinh" id="female" value="nữ">
                         <label class="form-check-label" for="female">
                             Nữ
                         </label>
@@ -73,17 +80,17 @@
 
             <div class="col-1">
                 <label for="year" class="form-label">Năm sinh</label>
-                <input type="text" class="form-control" name="year" id="year" placeholder="1998">
+                <input type="text" class="form-control" name="nam_sinh" id="year" placeholder="1998">
             </div>
 
             <div class="col">
                 <label for="address" class="form-label">Địa chỉ</label>
-                <input type="text" class="form-control" name="address" id="address" placeholder="97 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh">
+                <input type="text" class="form-control" name="dia_chi" id="address" placeholder="97 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh">
             </div>
 
             <div class="col-auto">
                 <label for="phone" class="form-label">Số điện thoại</label>
-                <input type="tel" class="form-control" name="phone" id="phone">
+                <input type="tel" class="form-control" name="so_dien_thoai" id="phone">
             </div>
 
             <div class="col-auto">
@@ -91,6 +98,7 @@
             </div>
         </div>
     </form>
+    {% endif %}
 
     <div class="row justify-content-center">
         <div class="col-auto">
