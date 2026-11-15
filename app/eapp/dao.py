@@ -8,7 +8,7 @@ def get_user_by_id(user_id):
     return User.query.get(user_id)
 
 def get_benh_nhan_toi_da():
-    return QuyDinh.BENH_NHAN_TOI_DA
+    return QuyDinh.BENH_NHAN_TOI_DA.value
 
 def get_danh_sach_kham(ngay_kham):
     ds_kham = DanhSachKham.query.where(DanhSachKham.ngay_kham == ngay_kham).first()

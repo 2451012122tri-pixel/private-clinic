@@ -13,6 +13,8 @@ def danh_sach_kham():
     ngay_kham = request.args.get('q')
 
     is_date_expired = False
+    is_full = False
+
     ds_benh_nhan = []
     if ngay_kham:
         ds_benh_nhan = dao.get_danh_sach_benh_nhan(ngay_kham)
@@ -20,14 +22,18 @@ def danh_sach_kham():
         if date.fromisoformat(ngay_kham) <= date.today():
             is_date_expired = True
 
+        if len(ds_benh_nhan) >= dao.get_benh_nhan_toi_da():
+            is_full = True
+
     return render_template('danh_sach_kham.html',
                            current_date=ngay_kham,
                            ds_benh_nhan=enumerate(ds_benh_nhan),
                            count=len(ds_benh_nhan),
-                           date_expired=is_date_expired)
+                           date_expired=is_date_expired,
+                           danh_sach_full=is_full)
 
 @app.route('/danhsachkham', methods=['POST'])
-def xu_ly_danh_sach_kham():
+def them_benh_nhan_vao_danh_sach_kham():
     ngay_kham = request.args.get('q')
 
     form = request.form
