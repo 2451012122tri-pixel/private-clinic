@@ -69,3 +69,14 @@ def create_thong_tin_kham(bn, ngay_kham):
     db.session.commit()
 
     return ttk
+
+def delete_thong_tin_kham(ttk_id):
+    ttk = ThongTinKham.query.where(ThongTinKham.id == ttk_id).first()
+
+    db.session.delete(ttk)
+    db.session.commit()
+
+    return True
+
+def gui_Twilio():
+    pass
