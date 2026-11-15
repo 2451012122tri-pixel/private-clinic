@@ -1,6 +1,6 @@
 from flask import render_template, request, redirect, flash
 from flask_login import login_user, logout_user, current_user
-from eapp import app, login, dao
+from eapp import app, db, login, dao
 from eapp.models import UserRoleEnum
 import eapp.admin  # noqa: F401
 
@@ -42,4 +42,5 @@ def logout_view():
 
 if __name__ == '__main__':
     with app.app_context():
+        db.create_all()
         app.run(debug=True)

@@ -1,9 +1,10 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Enum, Date, DateTime, UniqueConstraint
+import hashlib
+from datetime import datetime, date, timedelta
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Enum, Date, UniqueConstraint
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin
 from enum import Enum as UserEnum
-from datetime import datetime
-from eapp import db
+from eapp import app, db
 
 
 class BaseModel(db.Model):
@@ -126,3 +127,124 @@ class QuyDinh(BaseModel):
 
     so_benh_nhan_toi_da = Column(Integer, default=40)
     tien_kham = Column(Float, default=100000)
+
+
+def init_sample_data():
+    db.create_all()
+
+    # 1. Quy định khám mặc định
+    if QuyDinh.query.count() == 0:
+        db.session.add(QuyDinh(so_benh_nhan_toi_da=40, tien_kham=100000))
+        db.session.commit()
+
+    # 2. Tài khoản kiểm thử cho đầy đủ 5 vai trò (mật khẩu chung: 123456)
+    if User.query.count() == 0:
+        pw_default = hashlib.md5('123456'.encode('utf-8')).hexdigest()
+        users = [
+            User(name='Trần Đức Tài (Admin)', username='admin', password=pw_default, user_role=UserRoleEnum.QUAN_TRI),
+            User(name='BS. Nguyễn Minh Khang', username='bacsi', password=pw_default, user_role=UserRoleEnum.BAC_SI),
+            User(name='YT. Lê Thị Thu Hà', username='yta', password=pw_default, user_role=UserRoleEnum.Y_TA),
+            User(name='TN. Phạm Hoàng Nam', username='thungan', password=pw_default, user_role=UserRoleEnum.THU_NGAN),
+            User(name='Khách hàng mẫu', username='benhnhan', password=pw_default, user_role=UserRoleEnum.NGUOI_DUNG),
+        ]
+        db.session.add_all(users)
+        db.session.commit()
+
+    # 3. Đơn vị thuốc & Danh mục thuốc
+    if DonViThuoc.query.count() == 0:
+        dv_vien = DonViThuoc(ten_don_vi='Viên')
+        dv_vi = DonViThuoc(ten_don_vi='Vỉ')
+        dv_chai = DonViThuoc(ten_don_vi='Chai')
+        dv_goi = DonViThuoc(ten_don_vi='Gói')
+        db.session.add_all([dv_vien, dv_vi, dv_chai, dv_goi])
+        db.session.commit()
+
+        thuocs = [
+            Thuoc(ten_thuoc='Paracetamol 500mg', id_don_vi=dv_vien.id, don_gia=2000),
+            Thuoc(ten_thuoc='Amoxicillin 500mg', id_don_vi=dv_vi.id, don_gia=15000),
+            Thuoc(ten_thuoc='Vitamin C 500mg', id_don_vi=dv_vien.id, don_gia=1500),
+            Thuoc(ten_thuoc='Siro ho Bảo Thanh', id_don_vi=dv_chai.id, don_gia=55000),
+            Thuoc(ten_thuoc='Oresol bù điện giải', id_don_vi=dv_goi.id, don_gia=5000),
+            Thuoc(ten_thuoc='Berberin 100mg', id_don_vi=dv_chai.id, don_gia=25000),
+        ]
+        db.session.add_all(thuocs)
+        db.session.commit()
+
+    # 4. Bệnh nhân mẫu
+    if BenhNhan.query.count() == 0:
+        bns = [
+            BenhNhan(ho_ten='Nguyễn Văn An', gioi_tinh=1, nam_sinh=1995, dia_chi='Quận 1, TP.HCM', so_dien_thoai='0901111111'),
+            BenhNhan(ho_ten='Trần Thị Bình', gioi_tinh=0, nam_sinh=1998, dia_chi='Quận 3, TP.HCM', so_dien_thoai='0902222222'),
+            BenhNhan(ho_ten='Lê Hoàng Cường', gioi_tinh=1, nam_sinh=1988, dia_chi='Gò Vấp, TP.HCM', so_dien_thoai='0903333333'),
+            BenhNhan(ho_ten='Phạm Mỹ Dung', gioi_tinh=0, nam_sinh=2001, dia_chi='Bình Thạnh, TP.HCM', so_dien_thoai='0904444444'),
+            BenhNhan(ho_ten='Võ Quốc Đại', gioi_tinh=1, nam_sinh=1992, dia_chi='Thủ Đức, TP.HCM', so_dien_thoai='0905555555'),
+        ]
+        db.session.add_all(bns)
+        db.session.commit()
+
+    # 5. Dữ liệu khám bệnh, đơn thuốc và hóa đơn để test thống kê & quy trình khám
+    if DanhSachKham.query.count() == 0:
+        today = date.today()
+        day_1 = today.replace(day=1)
+        prev_month = day_1 - timedelta(days=5)
+
+        ds_prev = DanhSachKham(ngay_kham=prev_month)
+        ds_day1 = DanhSachKham(ngay_kham=day_1)
+        ds_today = DanhSachKham(ngay_kham=today) if today != day_1 else ds_day1
+        db.session.add_all(list({ds_prev, ds_day1, ds_today}))
+        db.session.commit()
+
+        bns = BenhNhan.query.all()
+        thuocs = Thuoc.query.all()
+
+        # Ca khám đã hoàn tất & thanh toán ở tháng trước
+        ttk1 = ThongTinKham(id_benh_nhan=bns[0].id, id_ds_kham=ds_prev.id, so_thu_tu=1, trang_thai_kham=1, trang_thai_duyet=1)
+        db.session.add(ttk1)
+        db.session.commit()
+        pk1 = PhieuKham(id_thong_tin_kham=ttk1.id, trieu_chung='Sốt nhẹ, đau họng', loai_benh_du_doan='Viêm họng cấp')
+        db.session.add(pk1)
+        db.session.commit()
+        db.session.add_all([
+            SoLuongThuoc(id_thuoc=thuocs[0].id, id_phieu_kham=pk1.id, so_luong=10, cach_dung='Sáng 1 viên, chiều 1 viên sau ăn'),
+            SoLuongThuoc(id_thuoc=thuocs[3].id, id_phieu_kham=pk1.id, so_luong=1, cach_dung='Uống 10ml x 3 lần/ngày'),
+        ])
+        db.session.add(HoaDon(id_phieu_kham=pk1.id, ngay_lap=prev_month, tien_kham=100000, tien_thuoc=75000, tong_tien=175000))
+
+        # Ca khám 1 đã hoàn tất & thanh toán trong tháng hiện tại (ngày mùng 1)
+        ttk2 = ThongTinKham(id_benh_nhan=bns[1].id, id_ds_kham=ds_day1.id, so_thu_tu=1, trang_thai_kham=1, trang_thai_duyet=1)
+        db.session.add(ttk2)
+        db.session.commit()
+        pk2 = PhieuKham(id_thong_tin_kham=ttk2.id, trieu_chung='Ho khan, sổ mũi', loai_benh_du_doan='Cảm cúm thông thường')
+        db.session.add(pk2)
+        db.session.commit()
+        db.session.add_all([
+            SoLuongThuoc(id_thuoc=thuocs[0].id, id_phieu_kham=pk2.id, so_luong=6, cach_dung='Uống khi sốt trên 38.5 độ'),
+            SoLuongThuoc(id_thuoc=thuocs[2].id, id_phieu_kham=pk2.id, so_luong=10, cach_dung='Sáng 1 viên sau ăn'),
+        ])
+        db.session.add(HoaDon(id_phieu_kham=pk2.id, ngay_lap=day_1, tien_kham=100000, tien_thuoc=27000, tong_tien=127000))
+
+        # Ca khám 2 đã hoàn tất & thanh toán trong tháng hiện tại (ngày hôm nay)
+        stt_today = 2 if ds_today.id == ds_day1.id else 1
+        ttk3 = ThongTinKham(id_benh_nhan=bns[2].id, id_ds_kham=ds_today.id, so_thu_tu=stt_today, trang_thai_kham=1, trang_thai_duyet=1)
+        db.session.add(ttk3)
+        db.session.commit()
+        pk3 = PhieuKham(id_thong_tin_kham=ttk3.id, trieu_chung='Đau bụng, rối loạn tiêu hóa', loai_benh_du_doan='Rối loạn tiêu hóa')
+        db.session.add(pk3)
+        db.session.commit()
+        db.session.add_all([
+            SoLuongThuoc(id_thuoc=thuocs[5].id, id_phieu_kham=pk3.id, so_luong=2, cach_dung='Uống 4 viên/lần, ngày 2 lần'),
+            SoLuongThuoc(id_thuoc=thuocs[4].id, id_phieu_kham=pk3.id, so_luong=4, cach_dung='Pha 1 gói với 200ml nước sôi để nguội'),
+        ])
+        db.session.add(HoaDon(id_phieu_kham=pk3.id, ngay_lap=today, tien_kham=100000, tien_thuoc=70000, tong_tien=170000))
+
+        # Ca khám đang chờ bác sĩ khám hôm nay (để Y tá / Bác sĩ test giao diện)
+        ttk4 = ThongTinKham(id_benh_nhan=bns[3].id, id_ds_kham=ds_today.id, so_thu_tu=stt_today + 1, trang_thai_kham=0, trang_thai_duyet=1)
+        ttk5 = ThongTinKham(id_benh_nhan=bns[4].id, id_ds_kham=ds_today.id, so_thu_tu=stt_today + 2, trang_thai_kham=0, trang_thai_duyet=1)
+        db.session.add_all([ttk4, ttk5])
+        db.session.commit()
+
+
+if __name__ == '__main__':
+    with app.app_context():
+        init_sample_data()
+        print("Khởi tạo bảng và dữ liệu kiểm thử thành công!")
