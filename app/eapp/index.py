@@ -10,7 +10,11 @@ def index():
 def danh_sach_kham():
     date = request.args.get('q')
 
-    return render_template('danh_sach_kham.html', current_date=date)
+    ds_benh_nhan = []
+    if date:
+        ds_benh_nhan = dao.get_danh_sach_benh_nhan(date)
+
+    return render_template('danh_sach_kham.html', current_date=date, ds_benh_nhan=enumerate(ds_benh_nhan))
 
 @app.route('/danhsachkham', methods=['POST'])
 def xu_ly_danh_sach_kham():

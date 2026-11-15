@@ -32,35 +32,17 @@
             </tr>
         </thead>
         <tbody>
+            {% for i, bn in ds_benh_nhan %}
             <tr>
-                <td>1</td>
-                <td>AAA AAA AAA</td>
-                <td>Nam</td>
-                <td>2000</td>
-                <td>97 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh</td>
-                <td>1234567890</td>
+                <td>{{ i + 1 }}</td>
+                <td>{{ bn.ho_ten }}</td>
+                <td>{{ bn.gioi_tinh }}</td>
+                <td>{{ bn.nam_sinh }}</td>
+                <td>{{ bn.dia_chi }}</td>
+                <td>{{ bn.so_dien_thoai }}</td>
                 <td></td>
             </tr>
-            <tr>
-                <td>2</td>
-                <td>BBB BBB BBB</td>
-                <td>Nữ</td>
-                <td>2000</td>
-                <td>99 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh</td>
-                <td>0987654321</td>
-                <td></td>
-            </tr>
-            <tr>
-                <td>3</td>
-                <td>CCC CCC CCC</td>
-                <td>Nam</td>
-                <td>2000</td>
-                <td>98 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh</td>
-                <td>1768594038</td>
-                <td>
-                    <button type="submit" class="btn btn-danger">-</button>
-                </td>
-            </tr>
+            {% endfor %}
         </tbody>
     </table>
 
