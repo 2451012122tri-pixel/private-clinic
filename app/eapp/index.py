@@ -1,4 +1,4 @@
-from flask import render_template
+from flask import render_template, session, request
 
 from eapp import app, login, dao
 
@@ -8,11 +8,15 @@ def index():
 
 @app.route('/danhsachkham')
 def danh_sach_kham():
-    return render_template('danh_sach_kham.html')
+    date = request.args.get('q')
+
+    return render_template('danh_sach_kham.html', current_date=date)
 
 @app.route('/danhsachkham', methods=['POST'])
 def xu_ly_danh_sach_kham():
-    return render_template('danh_sach_kham.html')
+    date = request.args.get('q')
+
+    return render_template('danh_sach_kham.html', current_date=date)
 
 @login.user_loader
 def get_user(user_id):
