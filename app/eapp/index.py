@@ -27,6 +27,7 @@ def danh_sach_kham():
 
     return render_template('danh_sach_kham.html',
                            current_date=ngay_kham,
+                           ds_kham_id=dao.get_danh_sach_kham(ngay_kham).id,
                            ds_benh_nhan=enumerate(ds_benh_nhan),
                            count=len(ds_benh_nhan),
                            date_expired=is_date_expired,
@@ -43,7 +44,19 @@ def them_benh_nhan_vao_danh_sach_kham():
                          form.get('dia_chi'),
                          form.get('so_dien_thoai'))
 
-    dao.add_benh_nhan_to_ds_kham(bn, ngay_kham)
+    if bn:
+        ttk = dao.create_thong_tin_kham(bn, ngay_kham)
+
+        saved_ttk = session.get('saved_ttk')
+        if not saved_ttk:
+            saved_ttk = {}
+
+        saved_ttk[str(ttk.id)] = {
+            "benh_nhan_id": ttk.benh_nhan_id,
+            "danh_sach_kham_id": ttk.danh_sach_kham_id
+        }
+
+        session['saved_ttk'] = saved_ttk
 
     return redirect(f'/danhsachkham?q={ngay_kham}')
 

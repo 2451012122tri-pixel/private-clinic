@@ -1,3 +1,5 @@
+from pickletools import dis
+
 from eapp.models import User, QuyDinh, DanhSachKham, ThongTinKham, BenhNhan
 
 from eapp import db
@@ -42,6 +44,9 @@ def get_benh_nhan(benh_nhan_id):
     return BenhNhan.query.get(benh_nhan_id)
 
 def create_benh_nhan(ho_ten, gioi_tinh, nam_sinh, dia_chi, so_dien_thoai):
+    if not ho_ten or not gioi_tinh or not nam_sinh or not dia_chi or not so_dien_thoai:
+        return None
+
     bn = BenhNhan(ho_ten=ho_ten,
                   gioi_tinh=gioi_tinh,
                   nam_sinh=nam_sinh,
@@ -53,7 +58,7 @@ def create_benh_nhan(ho_ten, gioi_tinh, nam_sinh, dia_chi, so_dien_thoai):
 
     return bn
 
-def add_benh_nhan_to_ds_kham(bn, ngay_kham):
+def create_thong_tin_kham(bn, ngay_kham):
     ds_kham = get_danh_sach_kham(ngay_kham)
 
     ttk = ThongTinKham(trang_thai_kham=1,

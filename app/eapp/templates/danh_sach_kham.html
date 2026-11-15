@@ -40,7 +40,16 @@
                 <td>{{ bn.nam_sinh }}</td>
                 <td>{{ bn.dia_chi }}</td>
                 <td>{{ bn.so_dien_thoai }}</td>
-                <td></td>
+                <td>
+                    {% if 'saved_ttk' in session %}
+                    {% for ttk in session['saved_ttk'].values() %}
+                    {% if ttk['danh_sach_kham_id'] == ds_kham_id
+                    and ttk['benh_nhan_id'] == bn.id %}
+                        <button type="submit" class="btn btn-danger">-</button>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
@@ -57,7 +66,7 @@
         <div class="row mb-5 align-items-center">
             <div class="col-2">
                 <label for="name" class="form-label">Họ tên</label>
-                <input type="text" class="form-control" name="ho_ten" id="name" placeholder="Nguyễn Văn A">
+                <input type="text" class="form-control" name="ho_ten" id="name" placeholder="Nguyễn Văn A" pattern="[A-Za-z ]+" maxlength="50" required>
             </div>
 
             <div class="col-auto">
@@ -80,17 +89,17 @@
 
             <div class="col-1">
                 <label for="year" class="form-label">Năm sinh</label>
-                <input type="text" class="form-control" name="nam_sinh" id="year" placeholder="1998">
+                <input type="text" class="form-control" name="nam_sinh" id="year" placeholder="1998" pattern="[0-9]{4}" maxlength="4" required>
             </div>
 
             <div class="col">
                 <label for="address" class="form-label">Địa chỉ</label>
-                <input type="text" class="form-control" name="dia_chi" id="address" placeholder="97 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh">
+                <input type="text" class="form-control" name="dia_chi" id="address" placeholder="97 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh" maxlength="100" required>
             </div>
 
             <div class="col-auto">
                 <label for="phone" class="form-label">Số điện thoại</label>
-                <input type="tel" class="form-control" name="so_dien_thoai" id="phone">
+                <input type="tel" class="form-control" name="so_dien_thoai" id="phone" placeholder="0987654321" pattern="[0-9]{10}" maxlength="10" required>
             </div>
 
             <div class="col-auto">
