@@ -1,1 +1,134 @@
 {% extends 'admin/master.html' %}
+
+{% block body %}
+
+{% if current_user.is_authenticated and current_user.user_role.name == 'QUAN_TRI' %}
+
+<div class="alert alert-info mt-3 d-flex justify-content-between align-items-center">
+    <h4 class="mb-0">Chào Quản trị viên <span class="text-success font-weight-bold">{{ current_user.name }}</span>!</h4>
+    <a href="/" class="btn btn-outline-primary btn-sm">Về trang chủ phòng mạch</a>
+</div>
+
+<!-- 3 thẻ thống kê nhanh tình hình phòng mạch -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-primary">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase">Danh mục thuốc</h6>
+                <h3 class="text-primary font-weight-bold mb-0">{{ tong_thuoc }} loại thuốc</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase">Doanh thu tháng {{ thang }}/{{ nam }}</h6>
+                <h3 class="text-success font-weight-bold mb-0">{{ "{:,.0f}".format(tong_doanh_thu) }} VNĐ</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-warning">
+            <div class="card-body">
+                <h6 class="text-muted text-uppercase">Quy định khám hiện hành</h6>
+                <p class="mb-0">
+                    Tối đa: <strong>{{ quy_dinh.so_benh_nhan_toi_da }} BN/ngày</strong> &bull;
+                    Phí khám: <strong>{{ "{:,.0f}".format(quy_dinh.tien_kham) }}đ</strong>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bố cục 2 cột: Bảng số liệu + Biểu đồ Chart.js -->
+<h5 class="font-weight-bold mb-3">Tổng quan doanh thu theo ngày trong tháng {{ thang }}/{{ nam }}</h5>
+<div class="row">
+    <div class="col-md-5">
+        <table class="table table-bordered table-hover">
+            <thead class="thead-light">
+                <tr>
+                    <th>Ngày</th>
+                    <th>Số bệnh nhân</th>
+                    <th>Doanh thu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if doanh_thu_stats %}
+                    {% for s in doanh_thu_stats %}
+                    <tr>
+                        <td>Ngày {{ s.ngay }}/{{ thang }}</td>
+                        <td>{{ s.so_benh_nhan }}</td>
+                        <td>{{ "{:,.0f}".format(s.doanh_thu) }} VNĐ</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">Chưa có dữ liệu hóa đơn trong tháng này</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-7">
+        <div>
+            <canvas id="myChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div id="index-chart-payload" class="d-none"
+     data-labels='[{% for s in doanh_thu_stats %}"Ngày {{ s.ngay }}"{{ "," if not loop.last }}{% endfor %}]'
+     data-values='[{% for s in doanh_thu_stats %}{{ s.doanh_thu }}{{ "," if not loop.last }}{% endfor %}]'>
+</div>
+
+{% else %}
+
+<!-- Khối đăng nhập dành riêng cho Quản trị viên -->
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0 font-weight-bold">ĐĂNG NHẬP QUẢN TRỊ VIÊN</h4>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% if current_user.is_authenticated and current_user.user_role.name != 'QUAN_TRI' %}
+                <div class="alert alert-warning">
+                    Tài khoản <strong>{{ current_user.name }}</strong> là tài khoản nhân viên, không có quyền Quản trị viên!
+                </div>
+                {% endif %}
+
+                <form method="post" action="/admin-login">
+                    <div class="form-group">
+                        <label for="username">Tên đăng nhập Admin:</label>
+                        <input type="text" class="form-control" placeholder="Nhập tài khoản quản trị"
+                               id="username" name="username" required autofocus />
+                    </div>
+                    <div class="form-group">
+                        <label for="pwd">Mật khẩu:</label>
+                        <input type="password" class="form-control" placeholder="Nhập mật khẩu"
+                               id="pwd" name="password" required />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block font-weight-bold">Đăng nhập quản trị</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block tail %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='/js/admin.js') }}"></script>
+{% endblock %}

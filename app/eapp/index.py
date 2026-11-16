@@ -1,6 +1,9 @@
-from flask import render_template, session, request, redirect
+from flask import render_template, session, request, redirect, flash
+from flask_login import login_user, logout_user, current_user
+from eapp import app, db, login, dao, utils
+from eapp.models import UserRoleEnum
+import eapp.admin  # noqa: F401
 
-from eapp import app, login, dao
 
 from datetime import date
 
@@ -47,8 +50,12 @@ def them_benh_nhan_vao_danh_sach_kham():
     ngay_kham = request.args.get('q')
 
     form = request.form
+
+    str_gioi_tinh = form.get('gioi_tinh')
+    gioi_tinh = utils.gioi_tinh_str_to_enum(str_gioi_tinh)
+
     bn = dao.create_benh_nhan(form.get('ho_ten'),
-                         form.get('gioi_tinh'),
+                         gioi_tinh,
                          form.get('nam_sinh'),
                          form.get('dia_chi'),
                          form.get('so_dien_thoai'))
@@ -64,8 +71,8 @@ def them_benh_nhan_vao_danh_sach_kham():
             saved_ttk = {}
 
         saved_ttk[str(ttk.id)] = {
-            "benh_nhan_id": ttk.benh_nhan_id,
-            "danh_sach_kham_id": ttk.danh_sach_kham_id
+            "id_benh_nhan": ttk.id_benh_nhan,
+            "id_ds_kham": ttk.id_ds_kham
         }
 
         session['saved_ttk'] = saved_ttk
@@ -90,6 +97,32 @@ def get_user(user_id):
     return dao.get_user_by_id(user_id)
 
 
+@app.route('/admin-login', methods=['post'])
+def admin_login_view():
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+
+    user = dao.authenticate_user(username=username, password=password)
+    if not user:
+        flash('Tên đăng nhập hoặc mật khẩu quản trị không chính xác!', 'danger')
+    elif user.user_role != UserRoleEnum.QUAN_TRI:
+        flash('Tài khoản này không có quyền truy cập cổng Quản trị!', 'danger')
+    else:
+        login_user(user=user)
+
+    return redirect('/admin')
+
+
+@app.route('/logout')
+def logout_view():
+    is_admin = current_user.is_authenticated and current_user.user_role == UserRoleEnum.QUAN_TRI
+    logout_user()
+    if is_admin:
+        return redirect('/admin')
+    return redirect('/')
+
+
 if __name__ == '__main__':
     with app.app_context():
+        db.create_all()
         app.run(debug=True)
