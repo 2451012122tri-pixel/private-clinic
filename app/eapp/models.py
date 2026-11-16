@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Date
 from sqlalchemy.orm import relationship
 from flask_login import UserMixin
 
@@ -21,6 +21,10 @@ class QuyDinh(UserEnum):
     BENH_NHAN_TOI_DA = 40
 
 
+class GioiTinh(UserEnum):
+    NAM = 1
+    NU = 2
+
 class User(BaseModel, UserMixin):
     name = Column(String(50), nullable=False)
     username = Column(String(50), nullable=False, unique=True)
@@ -30,18 +34,19 @@ class User(BaseModel, UserMixin):
 
 class BenhNhan(BaseModel):
     ho_ten = Column(String(50), nullable=False)
-    gioi_tinh = Column(String(3), nullable=False)
-    nam_sinh = Column(String(4), nullable=False)
+    gioi_tinh = Column(Enum(GioiTinh), nullable=False)
+    nam_sinh = Column(Integer, nullable=False)
     dia_chi = Column(String(100), nullable=False)
     so_dien_thoai = Column(String(10), nullable=False)
     thong_tin_kham = relationship('ThongTinKham', backref='benh_nhan', lazy=True)
 
 class DanhSachKham(BaseModel):
-    ngay_kham = Column(String(50), nullable=False)
+    ngay_kham = Column(Date, nullable=False)
     thong_tin_kham = relationship('ThongTinKham', backref='danh_sach_kham', lazy=True)
 
 class ThongTinKham(BaseModel):
     trang_thai_kham = Column(Integer, nullable=False, default=0)
+    so_thu_tu = Column(Integer, nullable=True)
     benh_nhan_id = Column(Integer, ForeignKey(BenhNhan.id), nullable=False)
     danh_sach_kham_id = Column(Integer, ForeignKey(DanhSachKham.id), nullable=False)
 

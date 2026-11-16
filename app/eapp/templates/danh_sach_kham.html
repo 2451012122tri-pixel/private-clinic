@@ -38,7 +38,13 @@
             <tr>
                 <td>{{ i + 1 }}</td>
                 <td>{{ bn.ho_ten }}</td>
-                <td>{{ bn.gioi_tinh }}</td>
+                <td>
+                    {% if bn.gioi_tinh == GIOI_TINH.NAM %}
+                    Nam
+                    {% elif bn.gioi_tinh == GIOI_TINH.NU %}
+                    Nữ
+                    {% endif %}
+                </td>
                 <td>{{ bn.nam_sinh }}</td>
                 <td>{{ bn.dia_chi }}</td>
                 <td>{{ bn.so_dien_thoai }}</td>

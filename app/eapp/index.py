@@ -19,10 +19,12 @@ def danh_sach_kham():
 
     ds_benh_nhan = []
     if ngay_kham:
-        ds_benh_nhan = dao.get_danh_sach_benh_nhan(ngay_kham)
+        ds_kham = dao.get_danh_sach_kham(ngay_kham)
 
-        if ds_benh_nhan:
-            ds_kham_id = dao.get_danh_sach_kham(ngay_kham).id
+        if ds_kham:
+            ds_kham_id = ds_kham.id
+
+        ds_benh_nhan = dao.get_danh_sach_benh_nhan(ds_kham)
 
         if date.fromisoformat(ngay_kham) <= date.today():
             is_date_expired = True
@@ -37,6 +39,7 @@ def danh_sach_kham():
                            count=len(ds_benh_nhan),
                            date_expired=is_date_expired,
                            danh_sach_full=is_full,
+                           GIOI_TINH=dao.get_Gioi_Tinh(),
                            BENH_NHAN_TOI_DA=BENH_NHAN_TOI_DA)
 
 @app.route('/danhsachkham', methods=['POST'])
@@ -51,7 +54,10 @@ def them_benh_nhan_vao_danh_sach_kham():
                          form.get('so_dien_thoai'))
 
     if bn and ngay_kham:
-        ttk = dao.create_thong_tin_kham(bn, ngay_kham)
+        ds_kham = dao.get_danh_sach_kham(ngay_kham)
+        so_thu_tu = dao.get_next_so_thu_tu(ds_kham)
+
+        ttk = dao.create_thong_tin_kham(bn, ds_kham, so_thu_tu)
 
         saved_ttk = session.get('saved_ttk')
         if not saved_ttk:
