@@ -66,6 +66,9 @@ class QuyDinhView(AdminAuthenticated):
         'so_benh_nhan_toi_da': 'Số bệnh nhân khám tối đa / ngày',
         'tien_kham': 'Tiền khám mặc định (VNĐ)'
     }
+    column_formatters = {
+        'tien_kham': lambda v, c, m, p: f"{m.tien_kham:,.0f}".replace(",", ".") + " VNĐ" if m.tien_kham is not None else "0 VNĐ"
+    }
     form_overrides = {
         'so_benh_nhan_toi_da': IntegerField,
         'tien_kham': FloatField
