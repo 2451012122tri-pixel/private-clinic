@@ -67,7 +67,7 @@ class QuyDinhView(AdminAuthenticated):
         'tien_kham': 'Tiền khám mặc định (VNĐ)'
     }
     column_formatters = {
-        'tien_kham': lambda v, c, m, p: f"{m.tien_kham:,.0f}".replace(",", ".") + " VNĐ" if m.tien_kham is not None else "0 VNĐ"
+        'tien_kham': lambda v, c, m, p: f"{m.tien_kham:,.0f}" if m.tien_kham is not None else "0"
     }
     form_overrides = {
         'so_benh_nhan_toi_da': IntegerField,
@@ -110,6 +110,9 @@ class ThuocView(AdminAuthenticated):
         'don_vi_thuoc': 'Đơn vị tính',
         'don_gia': 'Đơn giá (VNĐ)',
         'hinh_anh': 'Hình ảnh thuốc (URL)'
+    }
+    column_formatters = {
+        'don_gia': lambda v, c, m, p: f"{m.don_gia:,.0f}" if m.don_gia is not None else "0"
     }
     can_export = True
     column_searchable_list = ['ten_thuoc']
