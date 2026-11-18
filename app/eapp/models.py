@@ -21,6 +21,17 @@ class UserRoleEnum(UserEnum):
     THU_NGAN = 5
 
 
+class QuyDinh(BaseModel):
+    __tablename__ = 'quy_dinh'
+
+    so_benh_nhan_toi_da = Column(Integer, default=40)
+    tien_kham = Column(Float, default=100000)
+
+
+class GioiTinh(UserEnum):
+    NAM = 1
+    NU = 2
+
 class User(BaseModel, UserMixin):
     name = Column(String(50), nullable=False)
     username = Column(String(50), nullable=False, unique=True)
@@ -35,11 +46,10 @@ class BenhNhan(BaseModel):
     __tablename__ = 'benh_nhan'
 
     ho_ten = Column(String(100), nullable=False)
-    gioi_tinh = Column(Integer, nullable=False)  # 1: Nam, 0: Nữ
+    gioi_tinh = Column(Enum(GioiTinh), nullable=False)
     nam_sinh = Column(Integer, nullable=False)
-    dia_chi = Column(String(255), nullable=True)
-    so_dien_thoai = Column(String(15), nullable=False, unique=True)
-
+    dia_chi = Column(String(255), nullable=False)
+    so_dien_thoai = Column(String(10), nullable=False, unique=True)
     thong_tin_khams = relationship('ThongTinKham', backref='benh_nhan', lazy=True)
 
 
@@ -48,7 +58,6 @@ class DanhSachKham(BaseModel):
 
     ngay_kham = Column(Date, nullable=False, unique=True)
     thong_tin_khams = relationship('ThongTinKham', backref='danh_sach_kham', lazy=True)
-
 
 class ThongTinKham(BaseModel):
     __tablename__ = 'thong_tin_kham'
@@ -122,13 +131,6 @@ class HoaDon(BaseModel):
     tong_tien = Column(Float, nullable=False)
 
 
-class QuyDinh(BaseModel):
-    __tablename__ = 'quy_dinh'
-
-    so_benh_nhan_toi_da = Column(Integer, default=40)
-    tien_kham = Column(Float, default=100000)
-
-
 def init_sample_data():
     db.create_all()
 
@@ -173,11 +175,11 @@ def init_sample_data():
     # 4. Bệnh nhân mẫu
     if BenhNhan.query.count() == 0:
         bns = [
-            BenhNhan(ho_ten='Nguyễn Văn An', gioi_tinh=1, nam_sinh=1995, dia_chi='Quận 1, TP.HCM', so_dien_thoai='0901111111'),
-            BenhNhan(ho_ten='Trần Thị Bình', gioi_tinh=0, nam_sinh=1998, dia_chi='Quận 3, TP.HCM', so_dien_thoai='0902222222'),
-            BenhNhan(ho_ten='Lê Hoàng Cường', gioi_tinh=1, nam_sinh=1988, dia_chi='Gò Vấp, TP.HCM', so_dien_thoai='0903333333'),
-            BenhNhan(ho_ten='Phạm Mỹ Dung', gioi_tinh=0, nam_sinh=2001, dia_chi='Bình Thạnh, TP.HCM', so_dien_thoai='0904444444'),
-            BenhNhan(ho_ten='Võ Quốc Đại', gioi_tinh=1, nam_sinh=1992, dia_chi='Thủ Đức, TP.HCM', so_dien_thoai='0905555555'),
+            BenhNhan(ho_ten='Nguyễn Văn An', gioi_tinh=GioiTinh.NU, nam_sinh=1995, dia_chi='Quận 1, TP.HCM', so_dien_thoai='0901111111'),
+            BenhNhan(ho_ten='Trần Thị Bình', gioi_tinh=GioiTinh.NAM, nam_sinh=1998, dia_chi='Quận 3, TP.HCM', so_dien_thoai='0902222222'),
+            BenhNhan(ho_ten='Lê Hoàng Cường', gioi_tinh=GioiTinh.NU, nam_sinh=1988, dia_chi='Gò Vấp, TP.HCM', so_dien_thoai='0903333333'),
+            BenhNhan(ho_ten='Phạm Mỹ Dung', gioi_tinh=GioiTinh.NAM, nam_sinh=2001, dia_chi='Bình Thạnh, TP.HCM', so_dien_thoai='0904444444'),
+            BenhNhan(ho_ten='Võ Quốc Đại', gioi_tinh=GioiTinh.NU, nam_sinh=1992, dia_chi='Thủ Đức, TP.HCM', so_dien_thoai='0905555555'),
         ]
         db.session.add_all(bns)
         db.session.commit()

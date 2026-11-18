@@ -1,0 +1,138 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Danh sách khám{% endblock %}
+
+{% block content %}
+<h1 class="text-center mt-3">Danh sách khám</h1>
+
+<div class="row mb-3 justify-content-center">
+    <div class="col-auto">
+        <label for="date" class="form-label">
+            {% if current_date %}
+            (hiện tại: {{ current_date }})<br>
+            {% else %}
+            (nhấn ra ngoài sau khi chọn)<br>
+            {% endif %}
+            Chọn ngày khám
+        </label>
+        <input type="date" class="form-control" onblur="onDateInput(this.value)" id="date" name="date">
+    </div>
+</div>
+
+{% if current_date %}
+<div class="container mt-3">
+    <table class="table table-striped mb-3">
+        <thead>
+            <tr>
+                <th>STT</th>
+                <th>Họ tên</th>
+                <th>Giới tính</th>
+                <th>Năm sinh</th>
+                <th>Địa chỉ</th>
+                <th>Số điện thoại</th>
+                <th style="width: 37px"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for i, bn in ds_benh_nhan %}
+            <tr>
+                <td>{{ i + 1 }}</td>
+                <td>{{ bn.ho_ten }}</td>
+                <td>
+                    {% if bn.gioi_tinh == GIOI_TINH.NAM %}
+                    Nam
+                    {% elif bn.gioi_tinh == GIOI_TINH.NU %}
+                    Nữ
+                    {% endif %}
+                </td>
+                <td>{{ bn.nam_sinh }}</td>
+                <td>{{ bn.dia_chi }}</td>
+                <td>{{ bn.so_dien_thoai }}</td>
+                <td>
+                    {% if 'saved_ttk' in session %}
+                    {% for ttk_id, ttk in session['saved_ttk'].items() %}
+                    {% if ttk['id_ds_kham'] == ds_kham_id
+                    and ttk['id_benh_nhan'] == bn.id %}
+                        <button type="submit" class="btn btn-danger" onclick="deleteBenhNhan('{{ ttk_id }}')">-</button>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if count == 0 %}
+    <div class="alert alert-warning">
+        Danh sách trống
+    </div>
+    {% endif %}
+
+    <p>Tối đa {{ BENH_NHAN_TOI_DA}} bệnh nhân khám trong ngày.</p>
+
+    {% if not date_expired and not danh_sach_full %}
+    <form method="post" id="form">
+        <div class="row mb-5 align-items-center">
+            <div class="col-2">
+                <label for="name" class="form-label">Họ tên</label>
+                <input type="text" class="form-control" name="ho_ten" id="name" placeholder="Nguyễn Văn A" pattern="[A-Za-z ]+" required>
+            </div>
+
+            <div class="col-auto">
+                <fieldset>
+                    <label class="form-label">Giới tính</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="gioi_tinh" id="male" value="Nam" checked>
+                        <label class="form-check-label" for="male">
+                            Nam
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="gioi_tinh" id="female" value="Nữ">
+                        <label class="form-check-label" for="female">
+                            Nữ
+                        </label>
+                    </div>
+                </fieldset>
+            </div>
+
+            <div class="col-1">
+                <label for="year" class="form-label">Năm sinh</label>
+                <input type="text" class="form-control" name="nam_sinh" id="year" placeholder="1998" pattern="[0-9]{4}" maxlength="4" required>
+            </div>
+
+            <div class="col">
+                <label for="address" class="form-label">Địa chỉ</label>
+                <input type="text" class="form-control" name="dia_chi" id="address" placeholder="97 Võ Văn Tần, Phường 6, Quận 3, Hồ Chí Minh" required>
+            </div>
+
+            <div class="col-auto">
+                <label for="phone" class="form-label">Số điện thoại</label>
+                <input type="tel" class="form-control" name="so_dien_thoai" id="phone" placeholder="0987654321" pattern="[0-9]{10}" maxlength="10" required>
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" name="add" class="btn btn-success">+</button>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+
+    <div class="row justify-content-center mb-3">
+        {% if 'saved_ttk' in session and session['saved_ttk']|count > 0 %}
+        <div class="col-auto">
+            <button type="submit" name="submit" class="btn btn-primary" onclick="deleteThongTinKhamSession()">Hoàn thành</button>
+        </div>
+        {% endif %}
+
+        <div class="col-auto">
+            <button type="submit" name="print" class="btn btn-primary">In danh sách</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/prevent_unfinished_form.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/danhsachkham.js') }}" defer></script>
+{% endblock %}

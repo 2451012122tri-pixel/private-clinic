@@ -2,11 +2,8 @@ import hashlib
 from sqlalchemy import func, extract
 from eapp import db
 from eapp.models import (User, QuyDinh, DonViThuoc, Thuoc,
-                         SoLuongThuoc, PhieuKham, ThongTinKham, DanhSachKham, HoaDon)
-
-
-def get_user_by_id(user_id):
-    return User.query.get(int(user_id))
+                         SoLuongThuoc, PhieuKham, ThongTinKham, DanhSachKham, HoaDon, BenhNhan, GioiTinh)
+from datetime import date
 
 
 def authenticate_user(username, password):
@@ -82,3 +79,108 @@ def stats_su_dung_thuoc_thang(thang, nam):
                     extract('year', DanhSachKham.ngay_kham).__eq__(int(nam)))
             .group_by(Thuoc.id, Thuoc.ten_thuoc, DonViThuoc.ten_don_vi)
             .order_by(func.sum(SoLuongThuoc.so_luong).desc()).all())
+
+
+def get_user_by_id(user_id):
+    return User.query.get(int(user_id))
+
+def get_benh_nhan_toi_da():
+    return get_quy_dinh().so_benh_nhan_toi_da
+
+def create_danh_sach_kham(ngay_kham):
+    ds_kham = DanhSachKham(ngay_kham=ngay_kham)
+    db.session.add(ds_kham)
+    db.session.commit()
+
+    return ds_kham
+
+def get_danh_sach_kham(ngay_kham):
+    ds_kham = DanhSachKham.query.where(DanhSachKham.ngay_kham == ngay_kham).first()
+
+    if not ds_kham and date.fromisoformat(ngay_kham) > date.today():
+        create_danh_sach_kham(ngay_kham)
+
+    return ds_kham
+
+def get_danh_sach_benh_nhan(ds_kham):
+    if not ds_kham:
+        return []
+
+    query = (db.session.query(ThongTinKham.id, ThongTinKham.id_benh_nhan)
+             .where(ThongTinKham.id_ds_kham==ds_kham.id)
+             .all())
+
+    ds_benh_nhan = []
+
+    for value in query:
+        bn = get_benh_nhan(value[1])
+        ds_benh_nhan.append(bn)
+
+    return ds_benh_nhan
+
+def get_benh_nhan(id_benh_nhan):
+    return BenhNhan.query.get(id_benh_nhan)
+
+def get_benh_nhan_by_stt(so_dien_thoai):
+    return BenhNhan.query.where(BenhNhan.so_dien_thoai == so_dien_thoai).first()
+
+def create_benh_nhan(ho_ten, gioi_tinh, nam_sinh, dia_chi, so_dien_thoai):
+    if not ho_ten or not gioi_tinh or not nam_sinh or not dia_chi or not so_dien_thoai:
+        return None
+
+    bn_trung_sdt = get_benh_nhan_by_stt(so_dien_thoai)
+
+    if bn_trung_sdt:
+        return None
+
+    bn = BenhNhan(ho_ten=ho_ten,
+                  gioi_tinh=gioi_tinh,
+                  nam_sinh=nam_sinh,
+                  dia_chi=dia_chi,
+                  so_dien_thoai=so_dien_thoai)
+
+    db.session.add(bn)
+    db.session.commit()
+
+    return bn
+
+def get_next_so_thu_tu(ds_kham):
+    if not ds_kham:
+        return None
+
+    ds_ttk = ThongTinKham.query.where(ThongTinKham.id_ds_kham == ds_kham.id).all()
+    
+    if ds_ttk:
+        so_thu_tu_cuoi = ds_ttk[-1].so_thu_tu
+
+        if so_thu_tu_cuoi:
+            return so_thu_tu_cuoi + 1
+        else:
+            return None
+
+    return 1
+
+def create_thong_tin_kham(bn, ds_kham, so_thu_tu=None):
+    ttk = ThongTinKham(trang_thai_kham=1,
+                       so_thu_tu=so_thu_tu,
+                       id_benh_nhan=bn.id,
+                       id_ds_kham=ds_kham.id)
+
+    db.session.add(ttk)
+    db.session.commit()
+
+    return ttk
+
+def delete_thong_tin_kham(ttk_id):
+    ttk = ThongTinKham.query.where(ThongTinKham.id == ttk_id).first()
+
+    db.session.delete(ttk)
+    db.session.commit()
+
+    return True
+
+def get_Gioi_Tinh():
+    return GioiTinh
+
+def gui_Twilio():
+    pass
