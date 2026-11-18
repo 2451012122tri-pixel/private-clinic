@@ -6,24 +6,47 @@ from flask import redirect, request, Response
 from flask_admin import Admin, BaseView, expose, AdminIndexView
 from flask_admin.contrib.sqla import ModelView
 from flask_login import logout_user, current_user
-from wtforms.fields.numeric import FloatField, IntegerField
+from wtforms.fields import StringField
+from wtforms.fields.numeric import IntegerField
+from wtforms.validators import ValidationError
 
 from eapp import app, db, dao
 from eapp.models import User, UserRoleEnum, QuyDinh, DonViThuoc, Thuoc
+
+
+class VNDField(StringField):
+    def _value(self):
+        if self.data is not None and self.data != '':
+            try:
+                return f"{float(self.data):,.0f}"
+            except (ValueError, TypeError):
+                return str(self.data)
+        return ''
+
+    def process_formdata(self, valuelist):
+        if valuelist and valuelist[0].strip():
+            raw = valuelist[0].replace(',', '').replace('.', '').strip()
+            try:
+                self.data = float(raw)
+            except ValueError:
+                self.data = None
+                raise ValidationError('Vui lòng nhập số tiền hợp lệ!')
+        else:
+            self.data = None
 
 
 class MyAdminIndex(AdminIndexView):
     @expose('/')
     def index(self):
         now = datetime.now()
-        thang = now.month
         nam = now.year
-        doanh_thu, tong_dt = dao.stats_doanh_thu_thang(thang, nam)
+        doanh_thu_nam, tong_dt_nam = dao.stats_doanh_thu_theo_thoi_gian(year=nam, time='month')
+        thuoc_theo_don_vi = dao.count_thuoc_by_don_vi()
         return self.render('admin/index.html',
                            tong_thuoc=dao.count_thuoc(),
-                           tong_doanh_thu=tong_dt,
-                           doanh_thu_stats=doanh_thu,
-                           thang=thang,
+                           tong_doanh_thu=tong_dt_nam,
+                           doanh_thu_stats=doanh_thu_nam,
+                           thuoc_theo_don_vi=thuoc_theo_don_vi,
                            nam=nam,
                            quy_dinh=dao.get_quy_dinh())
 
@@ -66,9 +89,12 @@ class QuyDinhView(AdminAuthenticated):
         'so_benh_nhan_toi_da': 'Số bệnh nhân khám tối đa / ngày',
         'tien_kham': 'Tiền khám mặc định (VNĐ)'
     }
+    column_formatters = {
+        'tien_kham': lambda v, c, m, p: f"{m.tien_kham:,.0f}" if m.tien_kham is not None else "0"
+    }
     form_overrides = {
         'so_benh_nhan_toi_da': IntegerField,
-        'tien_kham': FloatField
+        'tien_kham': VNDField
     }
 
     def on_model_change(self, form, model, is_created):
@@ -108,14 +134,18 @@ class ThuocView(AdminAuthenticated):
         'don_gia': 'Đơn giá (VNĐ)',
         'hinh_anh': 'Hình ảnh thuốc (URL)'
     }
+    column_formatters = {
+        'don_gia': lambda v, c, m, p: f"{m.don_gia:,.0f}" if m.don_gia is not None else "0"
+    }
     can_export = True
     column_searchable_list = ['ten_thuoc']
     column_filters = ['id', 'ten_thuoc', 'don_gia', 'don_vi_thuoc.ten_don_vi']
     edit_modal = True
     can_view_details = True
     details_modal = True
+    form_excluded_columns = ['so_luong_thuocs']
     form_overrides = {
-        'don_gia': FloatField
+        'don_gia': VNDField
     }
 
     def on_model_change(self, form, model, is_created):
@@ -140,29 +170,60 @@ class StatsView(BaseAdminAuthenticated):
     def index(self):
         now = datetime.now()
         err_msg = None
-        canh_bao_thang = False
+        kw = request.args.get('kw', '').strip()
 
-        try:
-            thang = int(request.args.get('thang', now.month))
-            nam = int(request.args.get('nam', now.year))
-        except ValueError:
-            thang, nam = now.month, now.year
-            err_msg = "Tháng hoặc năm nhập vào không hợp lệ!"
+        available_years = dao.get_available_years()
+        if not available_years:
+            return self.render('admin/stats.html',
+                               kw=kw,
+                               thang=now.month,
+                               nam=now.year,
+                               available_years=[],
+                               available_months=[],
+                               available_thuocs=[],
+                               err_msg="Chưa có dữ liệu hóa đơn trong cơ sở dữ liệu để thống kê!",
+                               doanh_thu_stats=[],
+                               tong_doanh_thu=0,
+                               thuoc_stats=[])
 
-        if thang < 1 or thang > 12 or nam < 2000 or nam > 2100:
-            err_msg = "Thời gian thống kê không hợp lệ (Tháng phải từ 1-12)!"
-            doanh_thu_stats, tong_doanh_thu, thuoc_stats = [], 0, []
+        year_raw = request.args.get('year', '').strip()
+        if year_raw:
+            try:
+                nam = int(year_raw)
+                if nam not in available_years:
+                    err_msg = f"Không có dữ liệu thống kê cho năm {nam}!"
+                    nam = available_years[0]
+            except ValueError:
+                err_msg = "Năm thống kê không hợp lệ!"
+                nam = available_years[0]
         else:
-            doanh_thu_stats, tong_doanh_thu = dao.stats_doanh_thu_thang(thang, nam)
-            thuoc_stats = dao.stats_su_dung_thuoc_thang(thang, nam)
-            if (thang == now.month and nam == now.year) or not doanh_thu_stats:
-                canh_bao_thang = True
+            nam = available_years[0]
+
+        available_months = dao.get_available_months(nam)
+        month_raw = request.args.get('month', '').strip()
+        if month_raw:
+            try:
+                thang = int(month_raw)
+                if thang not in available_months:
+                    thang = available_months[-1]
+            except ValueError:
+                err_msg = "Tháng thống kê không hợp lệ!"
+                thang = available_months[-1]
+        else:
+            thang = available_months[-1]
+
+        available_thuocs = dao.get_available_thuoc(thang=thang, nam=nam)
+        doanh_thu_stats, tong_doanh_thu = dao.stats_doanh_thu_thang(thang, nam)
+        thuoc_stats = dao.stats_su_dung_thuoc_thang(thang, nam, kw=kw)
 
         return self.render('admin/stats.html',
+                           kw=kw,
                            thang=thang,
                            nam=nam,
+                           available_years=available_years,
+                           available_months=available_months,
+                           available_thuocs=available_thuocs,
                            err_msg=err_msg,
-                           canh_bao_thang=canh_bao_thang,
                            doanh_thu_stats=doanh_thu_stats,
                            tong_doanh_thu=tong_doanh_thu,
                            thuoc_stats=thuoc_stats)
@@ -171,8 +232,8 @@ class StatsView(BaseAdminAuthenticated):
     def export_doanh_thu(self):
         now = datetime.now()
         try:
-            thang = int(request.args.get('thang', now.month))
-            nam = int(request.args.get('nam', now.year))
+            thang = int(request.args.get('month', now.month))
+            nam = int(request.args.get('year', now.year))
         except ValueError:
             thang, nam = now.month, now.year
 
@@ -180,7 +241,7 @@ class StatsView(BaseAdminAuthenticated):
 
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow([f'BÁO CÁO DOANH THU THÁNG {thang}/{nam}'])
+        writer.writerow([f'BÁO CÁO DOANH THU & TẦN SUẤT KHÁM THÁNG {thang}/{nam}'])
         writer.writerow(['STT', 'Ngày', 'Số bệnh nhân', 'Doanh thu (VNĐ)', 'Tỷ lệ (%)'])
         for idx, r in enumerate(doanh_thu_stats, start=1):
             writer.writerow([idx, f"{r['ngay']}/{thang}/{nam}", r['so_benh_nhan'], int(r['doanh_thu']), r['ty_le']])
@@ -195,20 +256,21 @@ class StatsView(BaseAdminAuthenticated):
     @expose('/export-thuoc')
     def export_thuoc(self):
         now = datetime.now()
+        kw = request.args.get('kw', '').strip()
         try:
-            thang = int(request.args.get('thang', now.month))
-            nam = int(request.args.get('nam', now.year))
+            thang = int(request.args.get('month', now.month))
+            nam = int(request.args.get('year', now.year))
         except ValueError:
             thang, nam = now.month, now.year
 
-        thuoc_stats = dao.stats_su_dung_thuoc_thang(thang, nam)
+        thuoc_stats = dao.stats_su_dung_thuoc_thang(thang, nam, kw=kw)
 
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow([f'BÁO CÁO SỬ DỤNG THUỐC THÁNG {thang}/{nam}'])
-        writer.writerow(['STT', 'Thuốc', 'Đơn vị tính', 'Số lượng', 'Số lần dùng'])
+        writer.writerow(['STT', 'Thuốc', 'Đơn vị tính', 'Số lượng', 'Số lần dùng', 'Doanh thu thuốc (VNĐ)'])
         for idx, t in enumerate(thuoc_stats, start=1):
-            writer.writerow([idx, t.ten_thuoc, t.ten_don_vi, t.so_luong, t.so_lan_dung])
+            writer.writerow([idx, t.ten_thuoc, t.ten_don_vi, t.so_luong, t.so_lan_dung, int(t.doanh_thu or 0)])
 
         return Response(
             output.getvalue().encode('utf-8-sig'),

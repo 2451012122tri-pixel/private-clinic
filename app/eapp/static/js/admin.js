@@ -1,79 +1,39 @@
-function drawAdminIndexChart() {
-    const payload = document.getElementById('index-chart-payload');
-    const ctx = document.getElementById('myChart');
-    if (!payload || !ctx || typeof Chart === 'undefined') return;
+function drawChart(data, labels, title, ctxId = 'myChart', type = 'pie') {
+    const ctx = document.getElementById(ctxId);
+    if (!ctx || typeof Chart === 'undefined') return;
 
-    const labels = JSON.parse(payload.dataset.labels || '[]');
-    const data = JSON.parse(payload.dataset.values || '[]');
+    const existingChart = Chart.getChart(ctx);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+
+    const colors = [];
+    for (let i = 0; i < data.length; i++) {
+        colors.push(`rgba(${parseInt(Math.random() * 220)}, ${parseInt(Math.random() * 220)}, ${parseInt(Math.random() * 220)}, 0.7)`);
+    }
+
+    const options = {
+        responsive: true
+    };
+    if (type === 'bar') {
+        options.scales = {
+            y: {
+                beginAtZero: true
+            }
+        };
+    }
 
     new Chart(ctx, {
-        type: 'bar',
+        type: type,
         data: {
             labels: labels,
             datasets: [{
-                label: 'Doanh thu (VNĐ)',
+                label: title,
                 data: data,
-                backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                borderWidth: 1
+                borderWidth: 1,
+                backgroundColor: colors
             }]
         },
-        options: {
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
+        options: options
     });
 }
-
-function drawAdminStatsCharts() {
-    const payload = document.getElementById('stats-payload');
-    if (!payload || typeof Chart === 'undefined') return;
-
-    const dtLabels = JSON.parse(payload.dataset.dtLabels || '[]');
-    const dtData = JSON.parse(payload.dataset.dtValues || '[]');
-    const thuocLabels = JSON.parse(payload.dataset.thuocLabels || '[]');
-    const thuocData = JSON.parse(payload.dataset.thuocValues || '[]');
-
-    const ctxDt = document.getElementById('chartDoanhThu');
-    if (ctxDt) {
-        new Chart(ctxDt, {
-            type: 'bar',
-            data: {
-                labels: dtLabels,
-                datasets: [{
-                    label: 'Doanh thu (VNĐ)',
-                    data: dtData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-    }
-
-    const ctxThuoc = document.getElementById('chartThuoc');
-    if (ctxThuoc) {
-        new Chart(ctxThuoc, {
-            type: 'pie',
-            data: {
-                labels: thuocLabels,
-                datasets: [{
-                    label: 'Số lượng đã dùng',
-                    data: thuocData,
-                    borderWidth: 1
-                }]
-            }
-        });
-    }
-}
-
-window.onload = function () {
-    drawAdminIndexChart();
-    drawAdminStatsCharts();
-};

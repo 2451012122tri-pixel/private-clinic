@@ -3,46 +3,74 @@
 {% block body %}
 <h2 class="text-center text-success font-weight-bold mt-3 mb-4">THỐNG KÊ & BÁO CÁO PHÒNG MẠCH</h2>
 
-<form class="form-inline justify-content-center bg-light p-3 border rounded mb-4" method="get" action="">
-    <label for="thang" class="font-weight-bold mr-2">Tháng:</label>
-    <select id="thang" name="thang" class="form-control mr-3">
-        {% for m in range(1, 13) %}
-            {% if m == thang %}
-            <option value="{{ m }}" selected>Tháng {{ m }}</option>
-            {% else %}
-            <option value="{{ m }}">Tháng {{ m }}</option>
-            {% endif %}
-        {% endfor %}
-    </select>
-
-    <label for="nam" class="font-weight-bold mr-2">Năm:</label>
-    <input type="number" id="nam" name="nam" class="form-control mr-3"
-           min="2020" max="2035" value="{{ nam }}" style="width: 110px;" required />
-
-    <button type="submit" class="btn btn-primary font-weight-bold">Xem báo cáo</button>
+<form method="get" action="" class="bg-light p-3 border rounded mb-4">
+    <div class="row">
+        <div class="col-md-5 mb-2">
+            <label for="kw" class="font-weight-bold">Tra cứu theo thuốc:</label>
+            <select class="form-control mb-2"
+                    onchange="document.getElementById('kw').value = this.value; this.form.submit();"
+                    {% if not available_thuocs %}disabled{% endif %}>
+                <option value="">-- Tất cả thuốc trong tháng {{ thang }}/{{ nam }} ({{ available_thuocs|length }} loại) --</option>
+                {% for t in available_thuocs %}
+                    <option value="{{ t.ten_thuoc }}" {% if kw == t.ten_thuoc %}selected{% endif %}>
+                        {{ t.ten_thuoc }}
+                    </option>
+                {% endfor %}
+            </select>
+            <input type="text" id="kw" name="kw" list="thuoc-suggestions" value="{{ kw }}"
+                   placeholder="Hoặc gõ tên thuốc để gợi ý & tìm kiếm..." class="form-control" />
+            <datalist id="thuoc-suggestions">
+                {% for t in available_thuocs %}
+                    <option value="{{ t.ten_thuoc }}">
+                {% endfor %}
+            </datalist>
+        </div>
+        <div class="col-md-4 mb-2">
+            <label for="month" class="font-weight-bold">Tháng (có dữ liệu):</label>
+            <select id="month" name="month" class="form-control" onchange="this.form.submit()" {% if not available_months %}disabled{% endif %}>
+                {% for m in available_months %}
+                    <option value="{{ m }}" {% if m == thang %}selected{% endif %}>Tháng {{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <label for="year" class="font-weight-bold">Năm (có dữ liệu):</label>
+            <select id="year" name="year" class="form-control" onchange="this.form.submit()" {% if not available_years %}disabled{% endif %}>
+                {% for y in available_years %}
+                    <option value="{{ y }}" {% if y == nam %}selected{% endif %}>Năm {{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="mt-2">
+        <button type="submit" class="btn btn-primary font-weight-bold" {% if not available_years %}disabled{% endif %}>
+            Xem báo cáo
+        </button>
+        <a href="/admin/statsview/" class="btn btn-outline-secondary ml-2">Đặt lại</a>
+    </div>
 </form>
 
 {% if err_msg %}
-<div class="alert alert-danger text-center">{{ err_msg }}</div>
+<div class="alert alert-warning text-center">{{ err_msg }}</div>
 {% endif %}
 
-{% if canh_bao_thang and not err_msg %}
-<div class="alert alert-warning text-center">
-    <strong>Lưu ý:</strong> Tháng {{ thang }}/{{ nam }} hiện chưa đầy đủ dữ liệu hoặc chưa hết tháng.
-</div>
-{% endif %}
-
-<!-- BÁO CÁO 1: DOANH THU THEO NGÀY TRONG THÁNG -->
+<!-- BÁO CÁO 1: DOANH THU & TẦN SUẤT KHÁM TỪNG THÁNG ĐƯỢC CHỌN (BIỂU ĐỒ CỘT) -->
 <div class="card shadow-sm mb-4">
-    <div class="card-header bg-primary text-white font-weight-bold d-flex justify-content-between align-items-center">
-        <span>1. Báo cáo doanh thu theo ngày (Tháng {{ thang }}/{{ nam }})</span>
-        <a href="/admin/statsview/export-doanh-thu?thang={{ thang }}&nam={{ nam }}"
-           class="btn btn-light btn-sm font-weight-bold">
-            Xuất file báo cáo
-        </a>
+    <div class="card-header bg-primary text-white font-weight-bold d-flex justify-content-between align-items-center flex-wrap">
+        <span>1. Báo cáo doanh thu & tần suất khám (Tháng {{ thang }}/{{ nam }})</span>
+        <div class="d-flex align-items-center mt-1 mt-md-0">
+            <select id="dtMetricSelect" class="form-control form-control-sm mr-2" style="width: auto;" onchange="renderDtChart()">
+                <option value="revenue" selected>Biểu đồ: Doanh thu (VNĐ)</option>
+                <option value="frequency">Biểu đồ: Tần suất khám (Số BN)</option>
+            </select>
+            <a href="/admin/statsview/export-doanh-thu?month={{ thang }}&year={{ nam }}"
+               class="btn btn-light btn-sm font-weight-bold">
+                Xuất file báo cáo
+            </a>
+        </div>
     </div>
     <div class="card-body">
-        <div class="row">
+        <div class="row align-items-center">
             <div class="col-md-6">
                 <table class="table table-bordered table-hover">
                     <thead class="thead-light">
@@ -77,23 +105,23 @@
                 </table>
             </div>
             <div class="col-md-6">
-                <canvas id="chartDoanhThu"></canvas>
+                <canvas id="myChart1"></canvas>
             </div>
         </div>
     </div>
 </div>
 
-<!-- BÁO CÁO 2: TẦN SUẤT SỬ DỤNG THUỐC TRONG THÁNG -->
+<!-- BÁO CÁO 2: TẦN SUẤT SỬ DỤNG THUỐC THEO THÁNG (BIỂU ĐỒ TRÒN) -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-success text-white font-weight-bold d-flex justify-content-between align-items-center">
-        <span>2. Báo cáo sử dụng thuốc (Tháng {{ thang }}/{{ nam }})</span>
-        <a href="/admin/statsview/export-thuoc?thang={{ thang }}&nam={{ nam }}"
+        <span>2. Báo cáo tần suất sử dụng thuốc (Tháng {{ thang }}/{{ nam }})</span>
+        <a href="/admin/statsview/export-thuoc?month={{ thang }}&year={{ nam }}&kw={{ kw }}"
            class="btn btn-light btn-sm font-weight-bold">
             Xuất file báo cáo
         </a>
     </div>
     <div class="card-body">
-        <div class="row">
+        <div class="row align-items-center">
             <div class="col-md-6">
                 <table class="table table-bordered table-hover">
                     <thead class="thead-light">
@@ -103,6 +131,7 @@
                             <th>Đơn vị tính</th>
                             <th class="text-center">Số lượng</th>
                             <th class="text-center">Số lần dùng</th>
+                            <th class="text-right">Doanh thu thuốc</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -114,33 +143,63 @@
                                 <td>{{ t.ten_don_vi }}</td>
                                 <td class="text-center">{{ t.so_luong }}</td>
                                 <td class="text-center">{{ t.so_lan_dung }}</td>
+                                <td class="text-right">{{ "{:,.0f}".format(t.doanh_thu or 0) }} VNĐ</td>
                             </tr>
                             {% endfor %}
                         {% else %}
                             <tr>
-                                <td colspan="5" class="text-center text-muted">Chưa có đơn thuốc nào trong tháng {{ thang }}/{{ nam }}</td>
+                                <td colspan="6" class="text-center text-muted">Không tìm thấy dữ liệu thuốc phù hợp trong tháng {{ thang }}/{{ nam }}</td>
                             </tr>
                         {% endif %}
                     </tbody>
                 </table>
             </div>
             <div class="col-md-6">
-                <canvas id="chartThuoc"></canvas>
+                <canvas id="myChart2"></canvas>
             </div>
         </div>
     </div>
-</div>
-
-<div id="stats-payload" class="d-none"
-     data-dt-labels='[{% for r in doanh_thu_stats %}"Ngày {{ r.ngay }}"{{ "," if not loop.last }}{% endfor %}]'
-     data-dt-values='[{% for r in doanh_thu_stats %}{{ r.doanh_thu }}{{ "," if not loop.last }}{% endfor %}]'
-     data-thuoc-labels='[{% for t in thuoc_stats %}{{ t.ten_thuoc | tojson }}{{ "," if not loop.last }}{% endfor %}]'
-     data-thuoc-values='[{% for t in thuoc_stats %}{{ t.so_luong }}{{ "," if not loop.last }}{% endfor %}]'>
 </div>
 {% endblock %}
 
 {% block tail %}
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ url_for('static', filename='/js/admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script>
+    let dtLabels = [];
+    let dtRevenueData = [];
+    let dtFreqData = [];
+
+    let thuocLabels = [];
+    let thuocQtyData = [];
+
+    {% for r in doanh_thu_stats %}
+        dtLabels.push('Ngày {{ r.ngay }}/{{ thang }}');
+        dtRevenueData.push({{ r.doanh_thu }});
+        dtFreqData.push({{ r.so_benh_nhan }});
+    {% endfor %}
+
+    {% for t in thuoc_stats %}
+        thuocLabels.push({{ t.ten_thuoc | tojson }});
+        thuocQtyData.push({{ t.so_luong }});
+    {% endfor %}
+
+    function renderDtChart() {
+        if (dtLabels.length === 0) return;
+        const metric = document.getElementById('dtMetricSelect').value;
+        if (metric === 'frequency') {
+            drawChart(dtFreqData, dtLabels, 'Tần suất khám tháng {{ thang }}/{{ nam }} (Số bệnh nhân)', 'myChart1', 'bar');
+        } else {
+            drawChart(dtRevenueData, dtLabels, 'Doanh thu tháng {{ thang }}/{{ nam }} (VNĐ)', 'myChart1', 'bar');
+        }
+    }
+
+    window.onload = function () {
+        renderDtChart();
+        if (thuocLabels.length > 0) {
+            drawChart(thuocQtyData, thuocLabels, 'Số lượng thuốc sử dụng tháng {{ thang }}/{{ nam }}', 'myChart2', 'pie');
+        }
+    };
+</script>
 {% endblock %}
