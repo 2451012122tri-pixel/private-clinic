@@ -94,6 +94,22 @@ def luu_danh_sach():
     return 'Successfully delete saved_ttk session'
 
 
+@app.route('/admin-login', methods=['post'])
+def admin_login_view():
+    username = request.form.get('username', '').strip()
+    password = request.form.get('password', '')
+
+    user = dao.authenticate_user(username=username, password=password)
+    if not user:
+        flash('Tên đăng nhập hoặc mật khẩu quản trị không chính xác!', 'danger')
+    elif user.user_role != UserRoleEnum.QUAN_TRI:
+        flash('Tài khoản này không có quyền truy cập cổng Quản trị!', 'danger')
+    else:
+        login_user(user=user)
+
+    return redirect('/admin')
+
+
 @app.route('/login')
 def login_view():
     page_return = request.args.get('q')
@@ -155,22 +171,6 @@ def logout_view():
     if is_admin:
         return redirect('/admin')
     return redirect('/')
-
-
-@app.route('/admin-login', methods=['post'])
-def admin_login_view():
-    username = request.form.get('username', '').strip()
-    password = request.form.get('password', '')
-
-    user = dao.authenticate_user(username=username, password=password)
-    if not user:
-        flash('Tên đăng nhập hoặc mật khẩu quản trị không chính xác!', 'danger')
-    elif user.user_role != UserRoleEnum.QUAN_TRI:
-        flash('Tài khoản này không có quyền truy cập cổng Quản trị!', 'danger')
-    else:
-        login_user(user=user)
-
-    return redirect('/admin')
 
 
 @login.user_loader
