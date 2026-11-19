@@ -1,0 +1,49 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Trang đăng nhập {% endblock%}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0 fw-bold">ĐĂNG NHẬP</h4>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% if current_user.is_authenticated and
+                (current_user.user_role.name == 'QUAN_TRI' or current_user.user_role.name == 'NGUOI_DUNG') %}
+                <div class="alert alert-warning">
+                    Tài khoản <strong>{{ current_user.name }}</strong> không phải là tài khoản nhân viên!
+                </div>
+                {% endif %}
+
+                {% if page_return %}
+                <form method="post" action="/login?q={{ page_return }}">
+                {% else %}
+                <form method="post" action="/login">
+                {% endif %}
+                    <label for="username" class="mb-2">Tên đăng nhập:</label>
+                    <input type="text" class="form-control mb-3" placeholder="Nhập tài khoản"
+                           id="username" name="username" required autofocus />
+
+                    <label for="pwd" class="mb-2">Mật khẩu:</label>
+                    <input type="password" class="form-control mb-3" placeholder="Nhập mật khẩu"
+                           id="pwd" name="password" autocomplete="new-password" required />
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary fw-bold">Đăng nhập</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
