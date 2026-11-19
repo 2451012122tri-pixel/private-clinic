@@ -9,7 +9,6 @@
     <a href="/" class="btn btn-outline-primary btn-sm">Về trang chủ phòng mạch</a>
 </div>
 
-<!-- 3 thẻ thống kê nhanh tình hình phòng mạch -->
 <div class="row mb-4">
     <div class="col-md-4">
         <div class="card border-primary">
@@ -22,7 +21,7 @@
     <div class="col-md-4">
         <div class="card border-success">
             <div class="card-body">
-                <h6 class="text-muted text-uppercase">Doanh thu tháng {{ thang }}/{{ nam }}</h6>
+                <h6 class="text-muted text-uppercase">Tổng doanh thu năm {{ nam }}</h6>
                 <h3 class="text-success font-weight-bold mb-0">{{ "{:,.0f}".format(tong_doanh_thu) }} VNĐ</h3>
             </div>
         </div>
@@ -33,52 +32,73 @@
                 <h6 class="text-muted text-uppercase">Quy định khám hiện hành</h6>
                 <p class="mb-0">
                     Tối đa: <strong>{{ quy_dinh.so_benh_nhan_toi_da }} BN/ngày</strong> &bull;
-                    Phí khám: <strong>{{ "{:,.0f}".format(quy_dinh.tien_kham) }}đ</strong>
+                    Phí khám: <strong>{{ "{:,.0f}".format(quy_dinh.tien_kham) }} VNĐ</strong>
                 </p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Bố cục 2 cột: Bảng số liệu + Biểu đồ Chart.js -->
-<h5 class="font-weight-bold mb-3">Tổng quan doanh thu theo ngày trong tháng {{ thang }}/{{ nam }}</h5>
-<div class="row">
+<!-- Tổng quan doanh thu theo tháng trong năm -->
+<h5 class="font-weight-bold mb-3">Tổng quan doanh thu theo tháng trong năm {{ nam }}</h5>
+<div class="row mb-4">
     <div class="col-md-5">
         <table class="table table-bordered table-hover">
             <thead class="thead-light">
                 <tr>
-                    <th>Ngày</th>
-                    <th>Số bệnh nhân</th>
-                    <th>Doanh thu</th>
+                    <th>Tháng</th>
+                    <th class="text-center">Số bệnh nhân</th>
+                    <th class="text-right">Doanh thu</th>
                 </tr>
             </thead>
             <tbody>
                 {% if doanh_thu_stats %}
                     {% for s in doanh_thu_stats %}
                     <tr>
-                        <td>Ngày {{ s.ngay }}/{{ thang }}</td>
-                        <td>{{ s.so_benh_nhan }}</td>
-                        <td>{{ "{:,.0f}".format(s.doanh_thu) }} VNĐ</td>
+                        <td>Tháng {{ s.thoi_gian }}/{{ nam }}</td>
+                        <td class="text-center">{{ s.so_benh_nhan }}</td>
+                        <td class="text-right">{{ "{:,.0f}".format(s.doanh_thu) }} VNĐ</td>
                     </tr>
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="3" class="text-center text-muted">Chưa có dữ liệu hóa đơn trong tháng này</td>
+                        <td colspan="3" class="text-center text-muted">Chưa có dữ liệu hóa đơn trong năm {{ nam }}</td>
                     </tr>
                 {% endif %}
             </tbody>
         </table>
     </div>
     <div class="col-md-7">
-        <div>
-            <canvas id="myChart"></canvas>
-        </div>
+        <canvas id="myChart"></canvas>
     </div>
 </div>
 
-<div id="index-chart-payload" class="d-none"
-     data-labels='[{% for s in doanh_thu_stats %}"Ngày {{ s.ngay }}"{{ "," if not loop.last }}{% endfor %}]'
-     data-values='[{% for s in doanh_thu_stats %}{{ s.doanh_thu }}{{ "," if not loop.last }}{% endfor %}]'>
+<!-- Thống kê danh mục thuốc theo đơn vị tính (LEFT JOIN) -->
+<h5 class="font-weight-bold mb-3">Thống kê thuốc theo đơn vị tính</h5>
+<div class="row">
+    <div class="col-md-5">
+        <table class="table table-bordered table-hover">
+            <thead class="thead-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Đơn vị tính</th>
+                    <th class="text-center">Số loại thuốc</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for dv in thuoc_theo_don_vi %}
+                <tr>
+                    <td>{{ dv[0] }}</td>
+                    <td>{{ dv[1] }}</td>
+                    <td class="text-center">{{ dv[2] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="col-md-7">
+        <canvas id="chartDonVi"></canvas>
+    </div>
 </div>
 
 {% else %}
@@ -114,7 +134,7 @@
                     <div class="form-group">
                         <label for="pwd">Mật khẩu:</label>
                         <input type="password" class="form-control" placeholder="Nhập mật khẩu"
-                               id="pwd" name="password" required />
+                               id="pwd" name="password" autocomplete="new-password" required />
                     </div>
                     <button type="submit" class="btn btn-primary btn-block font-weight-bold">Đăng nhập quản trị</button>
                 </form>
@@ -130,5 +150,30 @@
 {% block tail %}
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="{{ url_for('static', filename='/js/admin.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+<script>
+    let dtLabels = [];
+    let dtData = [];
+    let dvLabels = [];
+    let dvData = [];
+
+    {% for s in doanh_thu_stats %}
+        dtLabels.push('Tháng {{ s.thoi_gian }}');
+        dtData.push({{ s.doanh_thu }});
+    {% endfor %}
+
+    {% for dv in thuoc_theo_don_vi %}
+        dvLabels.push({{ dv[1] | tojson }});
+        dvData.push({{ dv[2] }});
+    {% endfor %}
+
+    window.onload = function () {
+        if (dtData.length > 0) {
+            drawChart(dtData, dtLabels, 'Doanh thu năm {{ nam }} (VNĐ)', 'myChart', 'bar');
+        }
+        if (dvData.length > 0) {
+            drawChart(dvData, dvLabels, 'Số loại thuốc', 'chartDonVi', 'pie');
+        }
+    };
+</script>
 {% endblock %}
