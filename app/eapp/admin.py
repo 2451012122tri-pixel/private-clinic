@@ -2,7 +2,7 @@ import csv
 import io
 import hashlib
 from datetime import datetime
-from flask import redirect, request, Response
+from flask import redirect, request, Response, jsonify
 from flask_admin import Admin, BaseView, expose, AdminIndexView
 from flask_admin.contrib.sqla import ModelView
 from flask_login import logout_user, current_user
@@ -119,7 +119,10 @@ class DonViThuocView(AdminAuthenticated):
     def on_model_change(self, form, model, is_created):
         if not model.ten_don_vi or not model.ten_don_vi.strip():
             raise ValueError("Tên đơn vị thuốc không được để trống!")
-        model.ten_don_vi = model.ten_don_vi.strip()
+        ten_sach = model.ten_don_vi.strip()
+        if dao.check_don_vi_exists(ten_sach, exclude_id=None if is_created else model.id):
+            raise ValueError(f"Đơn vị tính '{ten_sach}' đã tồn tại trong cơ sở dữ liệu!")
+        model.ten_don_vi = ten_sach
 
     def on_model_delete(self, model):
         if dao.is_don_vi_used(model.id):
@@ -127,19 +130,27 @@ class DonViThuocView(AdminAuthenticated):
 
 
 class ThuocView(AdminAuthenticated):
-    column_list = ['id', 'ten_thuoc', 'don_vi_thuoc', 'don_gia']
+    extra_js = ['/static/js/admin.js']
+    column_list = ['ten_thuoc', 'don_vi_thuoc', 'don_gia']
+    column_details_list = ['ten_thuoc', 'don_vi_thuoc', 'don_gia', 'hinh_anh', 'tinh_hinh_su_dung']
     column_labels = {
         'ten_thuoc': 'Tên thuốc',
         'don_vi_thuoc': 'Đơn vị tính',
         'don_gia': 'Đơn giá (VNĐ)',
-        'hinh_anh': 'Hình ảnh thuốc (URL)'
+        'hinh_anh': 'Hình ảnh thuốc (URL)',
+        'tinh_hinh_su_dung': 'Tình hình kê đơn (CSDL)'
     }
     column_formatters = {
-        'don_gia': lambda v, c, m, p: f"{m.don_gia:,.0f}" if m.don_gia is not None else "0"
+        'don_gia': lambda v, c, m, p: f"{m.don_gia:,.0f}" if m.don_gia is not None else "0",
+        'tinh_hinh_su_dung': lambda v, c, m, p: (
+            f"Đã kê {dao.get_thuoc_usage_stats(m.id)['tong_so_luong']} "
+            f"{m.don_vi_thuoc.ten_don_vi.lower() if m.don_vi_thuoc else 'đơn vị'} "
+            f"trong {dao.get_thuoc_usage_stats(m.id)['so_phieu_kham']} phiếu khám"
+        )
     }
     can_export = True
     column_searchable_list = ['ten_thuoc']
-    column_filters = ['id', 'ten_thuoc', 'don_gia', 'don_vi_thuoc.ten_don_vi']
+    column_filters = ['don_vi_thuoc.ten_don_vi', 'don_gia']
     edit_modal = True
     can_view_details = True
     details_modal = True
@@ -147,6 +158,47 @@ class ThuocView(AdminAuthenticated):
     form_overrides = {
         'don_gia': VNDField
     }
+
+    def get_query(self):
+        return dao.get_thuoc_list_query()
+
+    @expose('/api/ten-thuoc')
+    def api_ten_thuoc(self):
+        return jsonify(dao.get_all_ten_thuoc())
+
+    def scaffold_filters(self, name):
+        filters = super().scaffold_filters(name)
+        if name == 'don_vi_thuoc.ten_don_vi' and filters:
+            options = [(dv, dv) for dv in dao.get_all_ten_don_vi()]
+            for f in filters:
+                f.name = 'Đơn vị tính'
+                if type(f).__name__ in ('FilterEqual', 'FilterNotEqual', 'FilterInList', 'FilterNotInList'):
+                    f.options = options
+        return filters
+
+    def on_model_change(self, form, model, is_created):
+        if not model.ten_thuoc or not model.ten_thuoc.strip():
+            raise ValueError("Tên thuốc không được để trống!")
+        ten_sach = model.ten_thuoc.strip()
+        if dao.check_thuoc_exists(ten_sach, exclude_id=None if is_created else model.id):
+            raise ValueError(f"Thuốc '{ten_sach}' đã tồn tại trong cơ sở dữ liệu!")
+        if model.don_gia is None or model.don_gia < 0:
+            raise ValueError("Đơn giá thuốc phải lớn hơn hoặc bằng 0!")
+        model.ten_thuoc = ten_sach
+
+    def on_model_delete(self, model):
+        usage = dao.get_thuoc_usage_stats(model.id)
+        if usage['so_phieu_kham'] > 0:
+            raise ValueError(
+                f"Không thể xóa thuốc '{model.ten_thuoc}' vì đã được kê trong {usage['so_phieu_kham']} phiếu khám!"
+            )
+
+    def scaffold_filters(self, name):
+        filters = super().scaffold_filters(name)
+        if name == 'don_vi_thuoc.ten_don_vi' and filters:
+            for f in filters:
+                f.name = 'Đơn vị tính'
+        return filters
 
     def on_model_change(self, form, model, is_created):
         if not model.ten_thuoc or not model.ten_thuoc.strip():

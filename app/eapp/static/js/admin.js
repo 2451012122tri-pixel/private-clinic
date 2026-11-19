@@ -37,3 +37,55 @@ function drawChart(data, labels, title, ctxId = 'myChart', type = 'pie') {
         options: options
     });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.querySelector('input[name="search"]');
+    if (!searchInput || !window.location.pathname.includes('/admin/thuoc')) return;
+
+    fetch('/admin/thuoc/api/ten-thuoc')
+        .then(res => res.json())
+        .then(dsThuoc => {
+            const datalist = document.createElement('datalist');
+            datalist.id = 'thuoc-db-list';
+
+            const select = document.createElement('select');
+            select.className = 'form-control mr-2';
+            select.style.maxWidth = '240px';
+
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = dsThuoc.length > 0
+                ? `-- Chọn thuốc (${dsThuoc.length}) --`
+                : '-- Chưa có thuốc trong CSDL --';
+            select.appendChild(defaultOpt);
+
+            if (dsThuoc.length === 0) {
+                select.disabled = true;
+            } else {
+                dsThuoc.forEach(ten => {
+                    const dlOpt = document.createElement('option');
+                    dlOpt.value = ten;
+                    datalist.appendChild(dlOpt);
+
+                    const opt = document.createElement('option');
+                    opt.value = ten;
+                    opt.textContent = ten;
+                    if (searchInput.value === ten) {
+                        opt.selected = true;
+                    }
+                    select.appendChild(opt);
+                });
+            }
+
+            document.body.appendChild(datalist);
+            searchInput.setAttribute('list', 'thuoc-db-list');
+            searchInput.setAttribute('autocomplete', 'off');
+
+            select.addEventListener('change', function () {
+                searchInput.value = this.value;
+                searchInput.form.submit();
+            });
+
+            searchInput.parentNode.insertBefore(select, searchInput);
+        });
+});

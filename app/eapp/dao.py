@@ -1,5 +1,6 @@
 import hashlib
 from sqlalchemy import func, extract
+from sqlalchemy.orm import joinedload
 from eapp import db
 from eapp.models import (User, QuyDinh, DonViThuoc, Thuoc,
                          SoLuongThuoc, PhieuKham, ThongTinKham, DanhSachKham, HoaDon, BenhNhan, GioiTinh)
@@ -47,6 +48,58 @@ def count_thuoc_by_don_vi():
             .group_by(DonViThuoc.id, DonViThuoc.ten_don_vi)
             .order_by(DonViThuoc.id).all())
 
+def get_thuoc_list_query():
+    # Truy vấn danh sách thuốc kèm JOIN sang bảng DonViThuoc để lấy tên đơn vị tính
+    return db.session.query(Thuoc).options(joinedload(Thuoc.don_vi_thuoc))
+
+
+def get_all_ten_thuoc():
+    rows = (db.session.query(Thuoc.ten_thuoc)
+            .distinct()
+            .order_by(Thuoc.ten_thuoc.asc())
+            .all())
+    return [r.ten_thuoc for r in rows if r.ten_thuoc]
+
+
+def get_all_ten_don_vi():
+    rows = (db.session.query(DonViThuoc.ten_don_vi)
+            .distinct()
+            .order_by(DonViThuoc.ten_don_vi.asc())
+            .all())
+    return [r.ten_don_vi for r in rows if r.ten_don_vi]
+
+
+def check_thuoc_exists(ten_thuoc, exclude_id=None):
+    query = Thuoc.query.filter(func.lower(Thuoc.ten_thuoc).__eq__(ten_thuoc.strip().lower()))
+    if exclude_id:
+        query = query.filter(Thuoc.id != int(exclude_id))
+    return query.first() is not None
+
+
+def check_don_vi_exists(ten_don_vi, exclude_id=None):
+    query = DonViThuoc.query.filter(func.lower(DonViThuoc.ten_don_vi).__eq__(ten_don_vi.strip().lower()))
+    if exclude_id:
+        query = query.filter(DonViThuoc.id != int(exclude_id))
+    return query.first() is not None
+
+
+def get_thuoc_usage_stats(id_thuoc):
+    # JOIN 4 bảng Thuoc -> SoLuongThuoc -> PhieuKham -> HoaDon để thống kê tình hình sử dụng của từng thuốc
+    row = (db.session.query(
+                func.coalesce(func.sum(SoLuongThuoc.so_luong), 0).label('tong_so_luong'),
+                func.count(func.distinct(PhieuKham.id)).label('so_phieu_kham'),
+                func.coalesce(func.sum(SoLuongThuoc.so_luong * Thuoc.don_gia), 0).label('tong_doanh_thu')
+            )
+            .join(SoLuongThuoc, Thuoc.id.__eq__(SoLuongThuoc.id_thuoc))
+            .join(PhieuKham, SoLuongThuoc.id_phieu_kham.__eq__(PhieuKham.id))
+            .join(HoaDon, PhieuKham.id.__eq__(HoaDon.id_phieu_kham), isouter=True)
+            .filter(Thuoc.id.__eq__(int(id_thuoc)))
+            .first())
+    return {
+        'tong_so_luong': int(row.tong_so_luong or 0) if row else 0,
+        'so_phieu_kham': int(row.so_phieu_kham or 0) if row else 0,
+        'tong_doanh_thu': float(row.tong_doanh_thu or 0) if row else 0
+    }
 
 def get_available_years():
     rows = (db.session.query(extract('year', HoaDon.ngay_lap).label('nam'))
