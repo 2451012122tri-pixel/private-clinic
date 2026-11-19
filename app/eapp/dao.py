@@ -3,7 +3,7 @@ from sqlalchemy import func, extract
 from sqlalchemy.orm import joinedload
 from eapp import db
 from eapp.models import (User, QuyDinh, DonViThuoc, Thuoc,
-                         SoLuongThuoc, PhieuKham, ThongTinKham, DanhSachKham, HoaDon, BenhNhan, GioiTinh)
+                         SoLuongThuoc, PhieuKham, ThongTinKham, DanhSachKham, HoaDon, BenhNhan, GioiTinh, UserRoleEnum)
 from datetime import date
 
 
@@ -344,3 +344,10 @@ def get_Gioi_Tinh():
 
 def gui_Twilio():
     pass
+
+def create_user(name, username, password, user_role=UserRoleEnum.NGUOI_DUNG):
+    password = hashlib.md5(password.strip().encode('utf-8')).hexdigest()
+    u = User(name=name.strip(), username=username.strip(), password=password, user_role=user_role)
+
+    db.session.add(u)
+    db.session.commit()
