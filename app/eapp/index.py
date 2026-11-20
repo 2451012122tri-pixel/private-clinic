@@ -1,7 +1,7 @@
 from flask import render_template, session, request, redirect, flash
 from flask_login import login_user, logout_user, current_user
 from eapp import app, db, login, dao, utils
-from eapp.models import UserRoleEnum
+from eapp.models import UserRoleEnum, GioiTinh
 import eapp.admin  # noqa: F401
 
 
@@ -31,10 +31,11 @@ def danh_sach_kham():
 
         if date.fromisoformat(ngay_kham) <= date.today():
             is_date_expired = True
+            flash('Ngày khám cũ hơn hôm nay, chọn ngày khám khác để đăng ký khám', 'warning')
 
         if len(ds_benh_nhan) >= BENH_NHAN_TOI_DA:
             is_full = True
-
+        print(session)
     return render_template('danh_sach_kham.html',
                            page_return='danhsachkham',
                            current_date=ngay_kham,
@@ -71,9 +72,24 @@ def them_benh_nhan_vao_danh_sach_kham():
         if not saved_ttk:
             saved_ttk = {}
 
+        bn_session = {
+            'id': bn.id,
+            'so_thu_tu': so_thu_tu,
+            'ho_ten': form.get('ho_ten'),
+            'gioi_tinh': gioi_tinh.value,
+            'nam_sinh': form.get('nam_sinh'),
+            'dia_chi': form.get('dia_chi'),
+            'so_dien_thoai': form.get('so_dien_thoai')
+        }
+
+        ds_kham_session = {
+            'id': ds_kham.id,
+            'ngay_kham': ngay_kham
+        }
+
         saved_ttk[str(ttk.id)] = {
-            "id_benh_nhan": ttk.id_benh_nhan,
-            "id_ds_kham": ttk.id_ds_kham
+            "benh_nhan": bn_session,
+            "ds_kham": ds_kham_session
         }
 
         session['saved_ttk'] = saved_ttk
@@ -91,6 +107,8 @@ def xoa_benh_nhan_ra_danh_sach_kham(ttk_id):
 @app.route('/danhsachkham', methods=['PATCH'])
 def luu_danh_sach():
     session.pop('saved_ttk', None)
+
+    flash('Gửi danh sách lên hệ thống thành công, kiểm tra thông tin trong tin nhắn SMS trên Twilio hay trong tài khoản đăng nhập', 'success')
     return 'Successfully delete saved_ttk session'
 
 
