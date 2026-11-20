@@ -275,7 +275,7 @@ def get_benh_nhan(id_benh_nhan):
     return BenhNhan.query.get(id_benh_nhan)
 
 
-def get_benh_nhan_by_stt(so_dien_thoai):
+def get_benh_nhan_by_sdt(so_dien_thoai):
     return BenhNhan.query.where(BenhNhan.so_dien_thoai == so_dien_thoai).first()
 
 
@@ -283,10 +283,10 @@ def create_benh_nhan(ho_ten, gioi_tinh, nam_sinh, dia_chi, so_dien_thoai):
     if not ho_ten or not gioi_tinh or not nam_sinh or not dia_chi or not so_dien_thoai:
         return None
 
-    bn_trung_sdt = get_benh_nhan_by_stt(so_dien_thoai)
+    bn_trung_sdt = get_benh_nhan_by_sdt(so_dien_thoai)
 
     if bn_trung_sdt:
-        return None
+        return bn_trung_sdt
 
     bn = BenhNhan(ho_ten=ho_ten,
                   gioi_tinh=gioi_tinh,
@@ -318,6 +318,11 @@ def get_next_so_thu_tu(ds_kham):
 
 
 def create_thong_tin_kham(bn, ds_kham, so_thu_tu=None):
+    ttk_trung = get_thong_tin_kham(bn, ds_kham)
+
+    if ttk_trung:
+        return ttk_trung
+
     ttk = ThongTinKham(trang_thai_kham=1,
                        so_thu_tu=so_thu_tu,
                        id_benh_nhan=bn.id,
@@ -337,6 +342,8 @@ def delete_thong_tin_kham(ttk_id):
 
     return True
 
+def get_thong_tin_kham(bn, ds_kham):
+    return ThongTinKham.query.where(ThongTinKham.id_benh_nhan == bn.id, ThongTinKham.id_ds_kham == ds_kham.id).first()
 
 def get_Gioi_Tinh():
     return GioiTinh
