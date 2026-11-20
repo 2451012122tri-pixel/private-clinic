@@ -111,6 +111,10 @@
     <div class="alert alert-warning">
         Đăng ký bằng cách điền thông tin và chọn nút + xanh lá cây
     </div>
+    {% else %}
+    <div class="alert alert-warning">
+        Nhấn nút hoàn thành để lưu vào hệ thống
+    </div>
     {% endif %}
 
     <p>Số lượng chỗ trống: {{ BENH_NHAN_TOI_DA - count }}</p>
