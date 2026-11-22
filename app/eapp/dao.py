@@ -352,9 +352,9 @@ def get_Gioi_Tinh():
 def gui_Twilio():
     pass
 
-def create_user(name, username, password, user_role=UserRoleEnum.NGUOI_DUNG):
+def create_user(name, username, password, so_dien_thoai=None, user_role=UserRoleEnum.NGUOI_DUNG):
     password = hashlib.md5(password.strip().encode('utf-8')).hexdigest()
-    u = User(name=name.strip(), username=username.strip(), password=password, user_role=user_role)
+    u = User(name=name.strip(), username=username.strip(), password=password, so_dien_thoai=so_dien_thoai, user_role=user_role)
 
     db.session.add(u)
     db.session.commit()

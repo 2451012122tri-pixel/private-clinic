@@ -1,3 +1,5 @@
+from logging import warning
+
 from flask import render_template, session, request, redirect, flash
 from flask_login import login_user, logout_user, current_user
 from eapp import app, db, login, dao, utils
@@ -10,6 +12,34 @@ from datetime import date
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/sms', methods=['GET', 'POST'])
+def sms():
+    if not session.get('temp_sdt'):
+        return redirect('/')
+
+    so_dien_thoai = session['temp_sdt']
+
+    sms = request.form.get('sms')
+    if sms:
+        if sms == '123456':
+            verified_sdt = session.get('verified_sdt')
+            if not verified_sdt:
+                verified_sdt = {}
+
+            verified_sdt[str(so_dien_thoai)] = True
+
+            session['verified_sdt'] = verified_sdt
+
+            del session['temp_sdt']
+
+            return redirect(session.get('page_return', '/'))
+        else:
+            flash('Sai mã xác thực!', 'danger')
+
+            so_dien_thoai = session['temp_sdt']
+
+    return render_template('sms_verification.html', so_dien_thoai=so_dien_thoai)
 
 @app.route('/danhsachkham')
 def danh_sach_kham():
@@ -35,6 +65,8 @@ def danh_sach_kham():
 
         if len(ds_benh_nhan) >= BENH_NHAN_TOI_DA:
             is_full = True
+            flash('Ngày khám này đã hết chỗ!', 'danger')
+
         print(session)
     return render_template('danh_sach_kham.html',
                            page_return='danhsachkham',
@@ -50,6 +82,20 @@ def danh_sach_kham():
 @app.route('/danhsachkham', methods=['POST'])
 def them_benh_nhan_vao_danh_sach_kham():
     ngay_kham = request.args.get('q')
+
+
+    so_dien_thoai = request.form.get('so_dien_thoai')
+    if not session.get('verified_sdt') or session.get('verified_sdt') and str(so_dien_thoai) not in session['verified_sdt']:
+        if so_dien_thoai and (not current_user
+                              or current_user and not current_user.is_authenticated
+                              or current_user and current_user.is_authenticated and current_user.user_role.name == 'NGUOI_DUNG'):
+            session['temp_sdt'] = so_dien_thoai
+            session['page_return'] = f'/danhsachkham?q={ngay_kham}'
+
+            flash(f'Số điện thoại {so_dien_thoai} cần xác thực trước khi thêm vào danh sách khám!', 'warning')
+
+            return redirect('/sms')
+
 
     form = request.form
 
@@ -106,9 +152,11 @@ def xoa_benh_nhan_ra_danh_sach_kham(ttk_id):
 
 @app.route('/danhsachkham', methods=['PATCH'])
 def luu_danh_sach():
+    dao.gui_Twilio()
+    flash('Gửi danh sách lên hệ thống thành công, kiểm tra thông tin trong tin nhắn SMS trên Twilio hay trong tài khoản đăng nhập', 'success')
+
     session.pop('saved_ttk', None)
 
-    flash('Gửi danh sách lên hệ thống thành công, kiểm tra thông tin trong tin nhắn SMS trên Twilio hay trong tài khoản đăng nhập', 'success')
     return 'Successfully delete saved_ttk session'
 
 
@@ -150,6 +198,18 @@ def login_process():
         flash('Tài khoản này là của quản trị viên, nên đăng nhập ở trang admin', 'danger')
     else:
         login_user(user=user)
+
+        so_dien_thoai = user.so_dien_thoai
+
+        if so_dien_thoai:
+            verified_sdt = session.get('verified_sdt')
+            if not verified_sdt:
+                verified_sdt = {}
+
+            verified_sdt[str(so_dien_thoai)] = True
+
+            session['verified_sdt'] = verified_sdt
+
         return redirect(f'/{page_return}')
 
     return redirect('/login')
@@ -161,6 +221,18 @@ def register_view():
 
 @app.route('/register', methods=['POST'])
 def register_process():
+    so_dien_thoai = request.form.get('so_dien_thoai')
+    if str(so_dien_thoai) not in session['verified_sdt']:
+        if so_dien_thoai and (not current_user
+                              or current_user and not current_user.is_authenticated
+                              or current_user and current_user.is_authenticated and current_user.user_role.name == 'NGUOI_DUNG'):
+            session['temp_sdt'] = so_dien_thoai
+            session['page_return'] = '/register'
+
+            flash(f'Số điện thoại {so_dien_thoai} cần xác thực trước khi đăng ký tài khoản!', 'warning')
+
+            return redirect('/sms')
+
     password = request.form.get('password')
     confirm = request.form.get('confirm')
 

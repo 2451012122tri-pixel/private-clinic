@@ -106,6 +106,7 @@
 
     <p>Tối đa {{ BENH_NHAN_TOI_DA}} bệnh nhân khám trong ngày.</p>
     {% else %}
+    {% if not date_expired and not danh_sach_full %}
     {% if 'saved_ttk' not in session
     or ('saved_ttk' in session and not (session['saved_ttk']|count > 0)) %}
     <div class="alert alert-warning">
@@ -118,6 +119,8 @@
     {% endif %}
 
     <p>Số lượng chỗ trống: {{ BENH_NHAN_TOI_DA - count }}</p>
+    {% endif %}
+
     {% endif %}
 
     {% if not date_expired and not danh_sach_full %}
