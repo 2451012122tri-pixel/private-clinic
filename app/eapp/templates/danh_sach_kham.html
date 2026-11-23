@@ -19,6 +19,14 @@
     </div>
 </div>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
 {% if current_date %}
 <div class="container mt-3">
     <table class="table table-striped mb-3">
@@ -33,6 +41,7 @@
                 <th style="width: 37px"></th>
             </tr>
         </thead>
+        {% if current_user.is_authenticated and current_user.user_role.name == 'Y_TA' %}
         <tbody>
             {% for i, bn in ds_benh_nhan %}
             <tr>
@@ -51,8 +60,8 @@
                 <td>
                     {% if 'saved_ttk' in session %}
                     {% for ttk_id, ttk in session['saved_ttk'].items() %}
-                    {% if ttk['id_ds_kham'] == ds_kham_id
-                    and ttk['id_benh_nhan'] == bn.id %}
+                    {% if ttk['ds_kham'].id == ds_kham_id
+                    and ttk['benh_nhan'].id == bn.id %}
                         <button type="submit" class="btn btn-danger" onclick="deleteBenhNhan('{{ ttk_id }}')">-</button>
                     {% endif %}
                     {% endfor %}
@@ -60,9 +69,35 @@
                 </td>
             </tr>
             {% endfor %}
+
+        {% else %}
+            {% if 'saved_ttk' in session %}
+            {% for ttk_id, ttk in session['saved_ttk'].items() %}
+            <tr>
+                <td>{{ ttk['benh_nhan']['so_thu_tu'] }}</td>
+                <td>{{ ttk['benh_nhan']['ho_ten'] }}</td>
+                <td>
+                    {% if ttk['benh_nhan']['gioi_tinh'] == GIOI_TINH.NAM.value %}
+                    Nam
+                    {% elif ttk['benh_nhan']['gioi_tinh'] == GIOI_TINH.NU.value %}
+                    Nữ
+                    {% endif %}
+                </td>
+                <td>{{ ttk['benh_nhan']['nam_sinh'] }}</td>
+                <td>{{ ttk['benh_nhan']['dia_chi'] }}</td>
+                <td>{{ ttk['benh_nhan']['so_dien_thoai'] }}</td>
+                <td>
+                    <button type="submit" class="btn btn-danger" onclick="deleteBenhNhan('{{ ttk_id }}')">-</button>
+                </td>
+            </tr>
+            {% endfor %}
+            {% endif %}
         </tbody>
+
+        {% endif %}
     </table>
 
+    {% if current_user.is_authenticated and current_user.user_role.name == 'Y_TA' %}
     {% if count == 0 %}
     <div class="alert alert-warning">
         Danh sách trống
@@ -70,6 +105,23 @@
     {% endif %}
 
     <p>Tối đa {{ BENH_NHAN_TOI_DA}} bệnh nhân khám trong ngày.</p>
+    {% else %}
+    {% if not date_expired and not danh_sach_full %}
+    {% if 'saved_ttk' not in session
+    or ('saved_ttk' in session and not (session['saved_ttk']|count > 0)) %}
+    <div class="alert alert-warning">
+        Đăng ký bằng cách điền thông tin và chọn nút + xanh lá cây
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+        Nhấn nút hoàn thành để lưu vào hệ thống
+    </div>
+    {% endif %}
+
+    <p>Số lượng chỗ trống: {{ BENH_NHAN_TOI_DA - count }}</p>
+    {% endif %}
+
+    {% endif %}
 
     {% if not date_expired and not danh_sach_full %}
     <form method="post" id="form">
@@ -126,9 +178,11 @@
         </div>
         {% endif %}
 
+        {% if current_user.is_authenticated and current_user.user_role.name == 'Y_TA' %}
         <div class="col-auto">
             <button type="submit" name="print" class="btn btn-primary">In danh sách</button>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endif %}

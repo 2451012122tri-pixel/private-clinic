@@ -36,6 +36,7 @@ class User(BaseModel, UserMixin):
     name = Column(String(50), nullable=False)
     username = Column(String(50), nullable=False, unique=True)
     password = Column(String(100), nullable=False)
+    so_dien_thoai = Column(String(10), nullable=True, unique=True)
     user_role = Column(Enum(UserRoleEnum), default=UserRoleEnum.NGUOI_DUNG)
 
     def __str__(self):
